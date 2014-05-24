@@ -80,6 +80,8 @@ public class Externalclient extends Applet{
 	String CLIENT_NOT_INIT = "CLIENT_NOT_INITIALISED";
 	String FILENAME_PATTERN = "filename=[\"](.*)[\"]";
 	String	 CONTENT_DISPOSITION_NOT_PRESENT = "CONTENT_DISPOSITION_NOT PRESENT";
+	String FILE_NAME_NOT_FOUND = "FILE_NAME_NOT_FOUND_IN_DOWNLOAD";
+	
 	/*
 	 * disableSSL		:	Method to disable the SSL.
 	 * Pre				:	HttpClient client does not connect to a secure server.If the server certificate is not certified.
@@ -295,7 +297,36 @@ public class Externalclient extends Applet{
 			Header[] headers = response.getHeaders("Content-Disposition");
 			if(headers.length == 0)
 			{
-				retVal = 
+				retVal = CONTENT_DISPOSITION_NOT_PRESENT;
+			}
+			else
+			{
+				
+				//extracting the name of the file.
+				Pattern r = Pattern.compile(FILENAME_PATTERN);
+			    String filename = null;
+			    Matcher m = r.matcher(headers[0].toString());
+			    
+			    if(m.find())
+			    {
+			    	//filename found 
+			    	filename = m.group(1);
+			    	if(debugMode == "ON")
+			    	{
+			    		System.out.println("The filename of downloaded file is:"+filename);
+			    	}
+			    	
+			    }
+			    else
+			    {
+			    	retVal = FILE_NAME_NOT_FOUND;
+			    }
+			    
+				InputStream in = response.getEntity().getContent();
+				
+				File path = null;//new File();
+				
+				path.mkdirs();
 			}
 		} 
 		catch (ClientProtocolException e) 
@@ -308,12 +339,9 @@ public class Externalclient extends Applet{
 		}
 		
 		        	        
-		InputStream in = response.getEntity().getContent();
-	    File path = null;///new File();
-	    path.mkdirs();
-	    Pattern r = Pattern.compile(FILENAME_PATTERN);
-	    String filename = null;
-	    Matcher m = r.matcher(headers[0].toString());
+		
+	    
+	  
 	    
 	    if (m.find( )) 
 	    {
