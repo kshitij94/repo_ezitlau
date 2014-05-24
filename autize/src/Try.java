@@ -20,9 +20,13 @@ public class Try {
 	static JFileChooser fileChooser;
 	static File openFile;
 	static JFrame replaceFrame;
-	public static void main(String[] args) throws FileNotFoundException {
+	static JFrame parentFrame;
+	
+	
+	public static void main(String[] args) throws FileNotFoundException 
+		{
 		// TODO Auto-generated method stub
-		JFrame parentFrame = new JFrame();
+		 parentFrame = new JFrame();
 		 
 		fileChooser = new JFileChooser();
 		fileChooser.setDialogTitle("Specify a file to open");   
