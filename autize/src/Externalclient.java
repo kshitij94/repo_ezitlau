@@ -143,44 +143,32 @@ public class Externalclient extends Applet{
     {
     	this.uploadLink = uploadLink;
     }
+    
+    private String initialiseApplet(String loginLink, String password, String uploadLink)
+    {
+    	String retVal = null;
+    	
+    	this.loginLink = loginLink;
+    	this.loginPassword = password;
+    	this.uploadLink = uploadLink;
+    	
+    	disableSSL();
+    	
+    	System.out.println("RETURN VALUE OF AUTHENTICATE : "+authenticate());
+    	return retVal;
+    }
+    
     /*
      * (non-Javadoc)
      * @see java.applet.Applet#init()
      * 
      */
-	public void init()
+	public void init(String debugMode)
 	{
 				
-		debugMode = "ON";
-		establishSecureConnection();
 		
-		if(debugMode == "ON")
-		{
-			disableSSL();
-			initDebugmode("","");
-			authenticate();
-			
-		}
-		setUploadLink("");
-		try 
-		{
-			//downloadForClient(httpclient, "https://61.12.99.226:1443/share/1w-1-eg97-YIeBXftjtkCbTlCVQoEMUD6B+YXNkYXNAd2VmZGV3LmNvbQ==");
-			uploadForClient("C:\\Users\\kshitij\\Google Drive\\Oriental-jsp\\src\\oriental\\server\\DB.java");
-			
-			httpclient.close();
-		
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
-		
-		
-		try {
-			httpclient.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	
+
 	
 	}	  
 	public void start()
@@ -214,7 +202,7 @@ public class Externalclient extends Applet{
 	/*
 	 * authenticate			:	method to login into the external client link.
 	 * Pre					:	External client has not logged in the external link.
-	 * Post					:	External client has been successfully logged into the external link.
+	 * Post					:	External client has been successfully logged into the external link.ie cookies are initialised
 	 * String 				:	Null if every thing is fine.Else a non null error is returned.
 	 * NOTE					:	METHOD USED FOR ONLY DEBUGGING PURPOSES.THIS METHOD IS NOT REQUIRED 
 	 * 								FOR DEPLOYMENT PURPOSES. 			
@@ -380,32 +368,7 @@ public class Externalclient extends Applet{
 	public void uploadForClient(CloseableHttpClient httpclient , String uploadUrl, String filePath) throws IOException
 	{
 		
-		/*
-		InputStream inputStream = new FileInputStream(new File(filePath));
-		byte[] data;
-		data = IOUtils.toByteArray(inputStream);
-		InputStreamBody inputStreamBody = new InputStreamBody(new ByteArrayInputStream(data), "ac.png");
-		MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();   
-		multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
-		multipartEntity.addPart("uploadfile",inputStreamBody);
-		
-		HttpPost uploadFile = new HttpPost("https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
-		
-		uploadFile.setEntity(multipartEntity.build());
-		System.out.println("content type = :"+multipartEntity.build().getContentType());
-		System.out.println("centen length = :"+multipartEntity.build().getContentLength());
-		CloseableHttpResponse response2  = httpclient.execute(uploadFile);
-		
-	    System.out.println("UPLOADING FILE DONE.....\nOUTPUT : ");
-		BufferedReader rd = new BufferedReader(new InputStreamReader(response2.getEntity().getContent()));
-	    String line = "";
-	    
-	    while ((line = rd.readLine()) != null) 
-	    {
-	      System.out.println(line);
-	    }
-	      
-	      */
+
 		System.out.println("wefewfewfewfewfewf");
 		File image = new File(filePath);
 	    FileBody fileBody = new FileBody(image);
