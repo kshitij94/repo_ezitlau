@@ -1,5 +1,7 @@
 import java.applet.Applet;
 import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -7,6 +9,7 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -79,16 +82,15 @@ import org.apache.http.util.EntityUtils;
 public class Externalclient extends Applet{
 	
 	private CloseableHttpClient httpclient = null; 
-	String debugMode = null;							/*debugMode is ON if debug and testing is on. Is OFF otherwise*/
 	String loginLink = null;								/*value of action in submit form.This page corresponds to the password requirement when the external link is opened.*/
 	String loginPassword = null;						/*Required only for debug purposes.*/
 	String uploadLink = null;							/*variable to store upload link.Required for deployment. */
-	
-	
-	String CLIENT_NOT_INIT = "CLIENT_NOT_INITIALISED";
+	String filename = null;
+	InputStream in = null;
+	File saveFile = null;
+	JFrame confirmSaveFrame = null;
 	String FILENAME_PATTERN = "filename=[\"](.*)[\"]";
-	String	 CONTENT_DISPOSITION_NOT_PRESENT = "CONTENT_DISPOSITION_NOT PRESENT";
-	String FILE_NAME_NOT_FOUND = "FILE_NAME_NOT_FOUND_IN_DOWNLOAD";
+	int bufferSize = 65536;
 	
 	/*
 	 * disableSSL		:	Method to disable the SSL.
@@ -109,59 +111,39 @@ public class Externalclient extends Applet{
 		} 
 		catch (NoSuchAlgorithmException e2) 
 		{
-			retVal = e2.getMessage();
+			e2.printStackTrace();
+			retVal ="Error in disableSSL:"+ e2.getMessage();
+			
 		} 
 		catch (KeyStoreException e2) 
 		{
-			retVal = e2.getMessage();
+			e2.printStackTrace();
+			
+			retVal = "Error in disableSSL:"+e2.getMessage();
 		} 
 		catch (KeyManagementException e) 
 		{
-			retVal = e.getMessage();
+			e.printStackTrace();
+			retVal ="Error in disableSSL:"+ e.getMessage();
 		}
 		return retVal;
 	}
-	
-    /*
-     * establishSecureConnection		:	Method to do handshake with the server to generate secrete session key.
-     * Pre								:	Only one layer of encryption was provided by the HTTPS.
-     * Post								:	Double layer excryption provided.One from HTTPS and one from the secrete session key.
-     * 
-     */
-    String establishSecureConnection()
+
+
+    
+    private String initialiseApplet(String loginLink, String password, String uploadLink) 
     {
     	String retVal = null;
-    	return retVal;
-    }
-    
-    /*
-     * initDebugmode		:	method to initialize loginLink, **.
-     * Uses					:	Only for debug mode. 
-     */
-    void initDebugmode(String loginLink, String loginPassword)
-    {
-    	this.loginLink = loginLink;
-    	this.loginPassword = loginPassword;
-    }
-    
-    /*
-     * 
-     */
-    void setUploadLink(String uploadLink)
-    {
-    	this.uploadLink = uploadLink;
-    }
-    
-    private String initialiseApplet(String loginLink, String password, String uploadLink) throws ClientProtocolException, IOException
-    {
-    	String retVal = null;
+    	
     	this.loginLink = loginLink;
     	this.loginPassword = password;
     	this.uploadLink = uploadLink;
     	
-    	disableSSL();
-    	
-    	System.out.println("RETURN VALUE OF AUTHENTICATE : "+authenticate());
+    	retVal = disableSSL();
+    	if(retVal == null)
+    	{
+    		retVal = authenticate();
+    	}    	
     	return retVal;
     }
     
@@ -177,29 +159,23 @@ public class Externalclient extends Applet{
 	}	  
 	public void start()
 	{
+		String result = null;
 		System.out.println("before initialiseApplet");
-		try 
+		
+		result = 	initialiseApplet("https://192.168.9.163/share/password/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t","88888888","https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
+
+		if(result != null)
 		{
-			initialiseApplet("https://192.168.9.163/share/password/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t","88888888","https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println(result);
+		}
+		else
+		{
+			//upload 
+			//uploadForClient();
+			//download
+			showSaveDialog("https://192.168.9.163/download/get/a-1-1-8");
 		}
 		
-		
-		System.out.println("befor upload");
-		
-		try {
-			System.out.println("upload status : "+uploadForClient());
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		System.out.println("after upload");
 	}
 	public void stop()
 	{
@@ -244,14 +220,17 @@ public class Externalclient extends Applet{
 				catch (UnsupportedEncodingException e) 
 				{
 					e.printStackTrace();
+					retVal ="Error in authenticate"+ e.getMessage();
 				} 
 				catch (ClientProtocolException e) 
 				{
 					e.printStackTrace();
+					retVal ="Error in authenticate"+ e.getMessage();
 				}
 				catch (IOException e) 
 				{
 					e.printStackTrace();
+					retVal ="Error in authenticate"+ e.getMessage();
 				}
 				
 				
@@ -269,43 +248,187 @@ public class Externalclient extends Applet{
 				catch (IllegalStateException e) 
 				{
 					e.printStackTrace();
+					retVal ="Error in authenticate: "+ e.getMessage();
 				} 
 				catch (IOException e) 
 				{
 					e.printStackTrace();
+					retVal ="Error in authenticate: "+ e.getMessage();
 				}
 				
-				
+			}
+			else
+			{
+				retVal = "Error in authenticate: login link or login password not initialised";
 			}
 		
 		}
 		else
 		{
-			retVal = CLIENT_NOT_INIT;
+			retVal = "Error in authenticate: httpclient not initialised";
 		}
 		
 		return retVal;
 	}
+	public String setInputStream(String downloadUrl)
+	{
+		String retVal = null;
+		CloseableHttpResponse response = null;
+		
+		HttpGet httpget1 = new HttpGet(downloadUrl);
+		
+		try 
+		{
+			response = httpclient.execute(httpget1);
+			Header[] headers = response.getHeaders("Content-Disposition");
+			if(headers.length == 0)
+			{
+				retVal = "CONTENT_DISPOSITION_NOT_PRESENT";
+				System.out.println("content disposition not preset");
+			}
+			else
+			{
+				
+				//extracting the name of the file.
+				Pattern r = Pattern.compile(FILENAME_PATTERN);
+			    filename = null;
+			    Matcher m = r.matcher(headers[0].toString());
+			    
+			    if(m.find())
+			    {
+			    	//filename found 
+			    	filename = m.group(1);
+			    	System.out.println("filename ="+filename);
+			    	
+			    	//assign in proper value which will be used by ConformSaveCancel and ConfirmSaveOk to get the data.
+			    	this.in = (response.getEntity().getContent());
+			   	}
+			    else
+			    {
+			    	retVal = "Error in downloadForClient :Matcher cannot find the pattern. FILE PATTER = '"+FILENAME_PATTERN+"' and HEADER got = "+ headers[0].toString();
+			    }
+			}
+		} 
+		catch (ClientProtocolException e) 
+		{
+			e.printStackTrace();
+			retVal = "Error in downloadForClient:"+e.getMessage();
+		} 
+		catch (IOException e) 
+		{
+			e.printStackTrace();
+			retVal = "Error in downloadForClient:"+e.getMessage();
+		}
+		return retVal;
+
+	}
 	
 	
+	
+	public String showSaveDialog(String downloadUrl)
+	{
+		String retVal = null;
+		if(in == null)
+		{
+			retVal = setInputStream(downloadUrl);
+		}
+		
+		if(retVal == null)
+		{
+			JFrame parentFrame = new JFrame();
+	    	
+	    	JFileChooser fileChooser = new JFileChooser();
+			if(saveFile == null)
+			{
+				fileChooser .setSelectedFile(new File(filename));
+			}
+			else
+			{
+				fileChooser .setSelectedFile(saveFile);
+			}
+	    	
+	    	
+	    	int userSelection = fileChooser.showSaveDialog(parentFrame);
+	    	
+	    	if(userSelection == JFileChooser.APPROVE_OPTION)
+	    	{
+	    		this.saveFile = new File(fileChooser.getCurrentDirectory() + File.separator + fileChooser.getSelectedFile().getName());
+	    		
+	    		if(!saveFile.exists())
+	    		{
+	    			 FileOutputStream fos;
+					try 
+					{
+						fos = new FileOutputStream(saveFile);
+						byte[] buffer = new byte[bufferSize*2];
+				        int len1 = 0;
+				        int i = 1;
+				        System.out.println("Writing to disk now...");
+				        
+				        while ((len1 = in.read(buffer)) != -1) 
+						{
+						          fos.write(buffer, 0, len1);
+						          System.out.println("loop +"+i);
+						          i++;
+						}
+				        System.out.println("Writing over.");
+						fos.close();
+						saveFile = null;
+						in = null;
+						filename = null;
+					} 
+					catch (FileNotFoundException e) 
+					{
+						e.printStackTrace();
+						retVal = e.getMessage();
+					} 
+					catch (IOException e) 
+					{
+						retVal = e.getMessage();
+						e.printStackTrace();
+					}
+			         
+					
+	    		}
+	    		else
+	    		{
+	    			confirmSaveFrame = new JFrame("Confirm Save As");
+	    			confirmSaveFrame.setSize(400,400);
+	    			confirmSaveFrame.setLayout(new GridLayout(3,1));
+	    			confirmSaveFrame.add(new JLabel(fileChooser.getSelectedFile().getName() + " already present. Do you want to replace it?"));
+	    			JButton submit = new JButton("Ok");
+					JButton cancel = new JButton("Cancel");
+					confirmSaveFrame.add(submit);
+					confirmSaveFrame.add(cancel);
+					confirmSaveFrame.setVisible(true);
+					
+					submit.addActionListener(new ConfirmSaveOk());
+					cancel.addActionListener(new ConformSaveCancel());
+	    		}
+	    	}
+		}
+		return retVal;
+	}
 	/*
 	 * downloadForClient		:	method to download file for the external client.
 	 */
+	/*
 	public String downloadForClient(String downloadUrl)
 	{
 		
 		String retVal = null;
 		CloseableHttpResponse response = null;
-		      
-		HttpGet httpget = new HttpGet(downloadUrl);
+		
+		HttpGet httpget1 = new HttpGet(downloadUrl);
 		
 		try 
 		{
-			response = httpclient.execute(httpget);
+			response = httpclient.execute(httpget1);
 			Header[] headers = response.getHeaders("Content-Disposition");
 			if(headers.length == 0)
 			{
-				retVal = CONTENT_DISPOSITION_NOT_PRESENT;
+				retVal = "CONTENT_DISPOSITION_NOT_PRESENT";
+				System.out.println("content disposition not preset");
 			}
 			else
 			{
@@ -319,75 +442,81 @@ public class Externalclient extends Applet{
 			    {
 			    	//filename found 
 			    	filename = m.group(1);
-			    	if(debugMode == "ON")
+			    	System.out.println("filename ="+filename);
+			    	
+			    	//assign in proper value which will be used by ConformSaveCancel and ConfirmSaveOk to get the data.
+			    	this.in = ( response.getEntity().getContent());
+			    	
+			    	JFrame parentFrame = new JFrame();
+			    	
+			    	JFileChooser fileChooser = new JFileChooser();
+					fileChooser .setSelectedFile(new File(filename));
+			    	
+			    	int userSelection = fileChooser.showSaveDialog(parentFrame);
+			    	
+			    	if(userSelection == JFileChooser.APPROVE_OPTION)
 			    	{
-			    		System.out.println("The filename of downloaded file is:"+filename);
+			    		this.saveFile = new File(fileChooser.getCurrentDirectory() + File.separator + fileChooser.getSelectedFile().getName());
+			    		
+			    		if(!saveFile.exists())
+			    		{
+			    			 FileOutputStream fos = new FileOutputStream(saveFile);
+					         byte[] buffer = new byte[bufferSize];
+					         int len1 = 0;
+					         while ((len1 = in.read(buffer)) != -1) 
+					         {
+					                   fos.write(buffer, 0, len1);
+					         }
+					         fos.close();
+			    		}
+			    		else
+			    		{
+			    			confirmSaveFrame = new JFrame("Confirm Save As");
+			    			confirmSaveFrame.setSize(400,400);
+			    			confirmSaveFrame.setLayout(new GridLayout(3,1));
+			    			confirmSaveFrame.add(new JLabel(fileChooser.getSelectedFile().getName() + " already present. Do you want to replace it?"));
+			    			JButton submit = new JButton("Ok");
+							JButton cancel = new JButton("Cancel");
+							confirmSaveFrame.add(submit);
+							confirmSaveFrame.add(cancel);
+							confirmSaveFrame.setVisible(true);
+							
+							submit.addActionListener(new ConfirmSaveOk());
+							cancel.addActionListener(new ConformSaveCancel());
+			    		}
 			    	}
 			    	
+		            
+
 			    }
 			    else
 			    {
-			    	retVal = FILE_NAME_NOT_FOUND;
+			    	retVal = "Error in downloadForClient :Matcher cannot find the pattern. FILE PATTER = '"+FILENAME_PATTERN+"' and HEADER got = "+ headers[0].toString();
 			    }
-			    
-				InputStream in = response.getEntity().getContent();
-				
-				File path = null;//new File();
-				
-				path.mkdirs();
 			}
 		} 
 		catch (ClientProtocolException e) 
 		{
-			retVal = e.getMessage();
+			e.printStackTrace();
+			retVal = "Error in downloadForClient:"+e.getMessage();
 		} 
 		catch (IOException e) 
 		{
-			retVal = e.getMessage();
+			e.printStackTrace();
+			retVal = "Error in downloadForClient:"+e.getMessage();
 		}
-		
-		        	        
-		
-	    
-	  /*
-	    
-	    if (m.find( )) 
-	    {
-	    	
-	        filename = m.group(1);
-	    }
-	    else 
-	    {
-	         filename = "myfile.txt";
-	    }
-	              
-	              System.out.println(filename);
-	              
-	              
-	              File file = new File(path, filename);
-	              FileOutputStream fos = new FileOutputStream(file);
-
-	              byte[] buffer = new byte[1024];
-	              int len1 = 0;
-	              while ((len1 = in.read(buffer)) != -1) {
-	                      fos.write(buffer, 0, len1);
-	              }
-
-	              fos.close();
-		
-	         
-				
-			 // httpPost = new HttpPost("");
-			 */ 
-			
-	              return null;
+		return retVal;
 
 	}
-	
-
-	public String uploadForClient() throws IOException
+	public void savedialogBox()
+	{
+		
+	}
+*/
+	public String uploadForClient()  
 	{
 		String retVal = null;
+		
 		//upload file
 		JFileChooser chooser = new JFileChooser();
 		JFrame parent =  new JFrame();
@@ -404,19 +533,122 @@ public class Externalclient extends Applet{
 		    
 		    post.setEntity(multipartEntity.build());
 		    
-		    HttpResponse response = httpclient.execute(post);
+		    HttpResponse response;
+			try 
+			{
+				response = httpclient.execute(post);
+				BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+			    String line = "";
+			    retVal = response.getStatusLine().toString();
+			    while ((line = rd.readLine()) != null) 
+			    {
+			      System.out.println(line);
+			    }
+			    System.out.println("Uploaded");
+			}
+			catch (ClientProtocolException e) 
+			{
+				e.printStackTrace();
+				retVal = "Error in uploadForClient" +e.getMessage();
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+				retVal = "Error in uploadForClient" +e.getMessage();
+			}
 		    
-		    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
-		    String line = "";
-		    retVal = response.getStatusLine().toString();
-		    while ((line = rd.readLine()) != null) 
-		    {
-		      System.out.println(line);
-		    }
+		    
 
 		}
 
 		return retVal;
+	}
+	
+	public void writeFileOnDisk(File file, InputStream inStream)
+	{
+		FileOutputStream fos;
+		try 
+		{
+			fos = new FileOutputStream(file);
+			byte[] buffer = new byte[bufferSize];
+	        int len1 = 0;
+	        int i = 1;
+	        System.out.println("Writing to disk now...");
+	        while ((len1 = in.read(buffer)) != -1) 
+	        {
+	                  fos.write(buffer, 0, len1);
+	                  System.out.println("loop "+i);
+	                  i++;
+	        }
+	        System.out.println("written done...");
+	        fos.close();
+		} 
+		catch (FileNotFoundException e) 
+		{
+			e.printStackTrace();
+		} 
+		catch (IOException e) 
+		{
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public class ConfirmSaveOk implements ActionListener 
+	{
+
+		@Override
+		public void actionPerformed(ActionEvent arg0) 
+		{
+			saveFile.delete();
+			FileOutputStream fos;
+			try 
+			{
+				System.out.println("confirm save ok.. writing now..");
+				fos = new FileOutputStream(saveFile);
+				byte[] buffer = new byte[bufferSize];
+		        int len1 = 0;
+		        int i = 1;
+		        System.out.println("Writing to disk now...");
+		        while ((len1 = in.read(buffer)) != -1) 
+		        {
+		                  fos.write(buffer, 0, len1);
+		                  System.out.println("loop "+i);
+		                  i++;
+		        }
+		        fos.close();
+		        
+		        System.out.println("written done...");
+		        in = null;
+		        saveFile = null;
+		        filename = null;
+		        confirmSaveFrame.dispose();
+			} 
+			catch (FileNotFoundException e) 
+			{
+				e.printStackTrace();
+				
+			} 
+			catch (IOException e)
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	         
+		}
+
+	}
+	
+	public class ConformSaveCancel implements ActionListener 
+	{
+
+		@Override
+		public void actionPerformed(ActionEvent arg0) 
+		{
+			confirmSaveFrame.dispose();
+			showSaveDialog(null);
+		}
+
 	}
 }
 

@@ -16,12 +16,15 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
@@ -153,7 +156,138 @@ public class Try {
 	    }
 	    */
 	}
-	public static void main(String[] args) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, ClientProtocolException, IOException
+	
+	//this is independently working of the download.Just remove the download from the method name and it is ready to run.
+	public static void download_main(String[] args) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, ClientProtocolException, IOException
+	{
+		SSLContextBuilder builder = new SSLContextBuilder();
+		builder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
+		SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(builder.build(), SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER );
+		httpclient = HttpClients.custom().setSSLSocketFactory(sslsf).build();
+		
+		
+		
+		HttpGet httpget = new HttpGet("https://192.168.9.163/share/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t");
+		HttpResponse response1 = httpclient.execute(httpget);
+		BufferedReader rd = new BufferedReader(new InputStreamReader(response1.getEntity().getContent()));
+		String line = "";
+		    
+		while ((line = rd.readLine()) != null) 
+		{
+			System.out.println(line);
+		}
+		
+		HttpPost post = new HttpPost("https://192.168.9.163/share/password/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t");
+		List <NameValuePair> list = new ArrayList<NameValuePair>();
+		list.add(new BasicNameValuePair("password","88888888"));
+		post.setEntity(new UrlEncodedFormEntity(list));
+		response1 = httpclient.execute(post);
+		 rd = new BufferedReader(new InputStreamReader(response1.getEntity().getContent()));
+			line = "";
+			    
+			while ((line = rd.readLine()) != null) 
+			{
+				System.out.println(line);
+			}
+			
+		//download
+			
+			String retVal = null;
+			CloseableHttpResponse response = null;
+			      
+			HttpGet httpget1 = new HttpGet("https://192.168.9.163/download/get/a-1-1-8");
+			
+			try 
+			{
+				response = httpclient.execute(httpget1);
+				Header[] headers = response.getHeaders("Content-Disposition");
+				if(headers.length == 0)
+				{
+					retVal = "CONTENT_DISPOSITION_NOT_PRESENT";
+					System.out.println("content disposition not preset");
+				}
+				else
+				{
+					
+					//extracting the name of the file.
+					Pattern r = Pattern.compile( "filename=[\"](.*)[\"]");
+				    String filename = null;
+				    Matcher m = r.matcher(headers[0].toString());
+				    
+				    if(m.find())
+				    {
+				    	//filename found 
+				    	filename = m.group(1);
+				    	System.out.println("filename ="+filename);
+				    }
+				    else
+				    {
+				    	retVal = "FILE_NAME_NOT_FOUND";
+				    }
+				    
+					InputStream in = response.getEntity().getContent();
+					
+					
+					File file = new File("C:\\Users\\kshitij\\Desktop\\"+filename);
+					
+		            FileOutputStream fos = new FileOutputStream(file);
+
+		            byte[] buffer = new byte[1024];
+		            int len1 = 0;
+		            while ((len1 = in.read(buffer)) != -1) 
+		            {
+		                      fos.write(buffer, 0, len1);
+		            }
+
+		            fos.close();
+				}
+			} 
+			catch (ClientProtocolException e) 
+			{
+				retVal = e.getMessage();
+			} 
+			catch (IOException e) 
+			{
+				retVal = e.getMessage();
+			}
+			
+			        	        
+			
+		    
+		  /*
+		    
+		    if (m.find( )) 
+		    {
+		    	
+		        filename = m.group(1);
+		    }
+		    else 
+		    {
+		         filename = "myfile.txt";
+		    }
+		              
+		              System.out.println(filename);
+		              
+		              
+		              File file = new File(path, filename);
+		              FileOutputStream fos = new FileOutputStream(file);
+
+		              byte[] buffer = new byte[1024];
+		              int len1 = 0;
+		              while ((len1 = in.read(buffer)) != -1) {
+		                      fos.write(buffer, 0, len1);
+		              }
+
+		              fos.close();
+			
+		         
+					
+				 // httpPost = new HttpPost("");
+				 */ 
+	}
+	
+	//method independent of outside world. remove the upload_ from the name and it is ready to run.
+	public static void upload_main(String[] args) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, ClientProtocolException, IOException
 	{
 		SSLContextBuilder builder = new SSLContextBuilder();
 		builder.loadTrustMaterial(null, new TrustSelfSignedStrategy());

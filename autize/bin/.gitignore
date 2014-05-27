@@ -5,3 +5,7 @@
 /Externalclient.class
 /HandleDownload.class
 /Design
+/ConfirmSave.class
+/Externalclient$ConfirmSave.class
+/Externalclient$ConfirmSaveOk.class
+/Externalclient$ConformSaveCancel.class
