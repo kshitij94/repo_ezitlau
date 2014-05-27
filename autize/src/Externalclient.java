@@ -155,15 +155,12 @@ public class Externalclient extends Applet{
     private String initialiseApplet(String loginLink, String password, String uploadLink) throws ClientProtocolException, IOException
     {
     	String retVal = null;
-    	System.out.println("inseide initiApplet");
     	this.loginLink = loginLink;
     	this.loginPassword = password;
     	this.uploadLink = uploadLink;
     	
-    	System.out.println("before diable SSL");
     	disableSSL();
     	
-    	System.out.println("before authenticate");
     	System.out.println("RETURN VALUE OF AUTHENTICATE : "+authenticate());
     	return retVal;
     }
@@ -181,7 +178,8 @@ public class Externalclient extends Applet{
 	public void start()
 	{
 		System.out.println("before initialiseApplet");
-		try {
+		try 
+		{
 			initialiseApplet("https://192.168.9.163/share/password/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t","88888888","https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
 		} catch (ClientProtocolException e) {
 			// TODO Auto-generated catch block
@@ -193,14 +191,14 @@ public class Externalclient extends Applet{
 		
 		
 		System.out.println("befor upload");
-		/*
+		
 		try {
 			System.out.println("upload status : "+uploadForClient());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		*/
+		
 		System.out.println("after upload");
 	}
 	public void stop()
@@ -218,7 +216,7 @@ public class Externalclient extends Applet{
 	 * NOTE					:	METHOD USED FOR ONLY DEBUGGING PURPOSES.THIS METHOD IS NOT REQUIRED 
 	 * 								FOR DEPLOYMENT PURPOSES. 			
 	 */
-	public String authenticate() throws ClientProtocolException, IOException
+	public String authenticate()  
 	{
 	
 		String retVal = null;
@@ -238,17 +236,45 @@ public class Externalclient extends Applet{
 				
 				list.add(new BasicNameValuePair("password",this.loginPassword));
 				
-				post.setEntity(new UrlEncodedFormEntity(list));
-				
-				response1 = httpclient.execute(post);
-				
-				rd = new BufferedReader(new InputStreamReader(response1.getEntity().getContent()));
-				line = "";
-					    
-				while ((line = rd.readLine()) != null) 
+				try 
 				{
-					System.out.println(line);
+					post.setEntity(new UrlEncodedFormEntity(list));
+					response1 = httpclient.execute(post);
+				} 
+				catch (UnsupportedEncodingException e) 
+				{
+					e.printStackTrace();
+				} 
+				catch (ClientProtocolException e) 
+				{
+					e.printStackTrace();
 				}
+				catch (IOException e) 
+				{
+					e.printStackTrace();
+				}
+				
+				
+				
+				try 
+				{
+					rd = new BufferedReader(new InputStreamReader(response1.getEntity().getContent()));
+					line = "";
+				    
+					while ((line = rd.readLine()) != null) 
+					{
+						System.out.println(line);
+					}
+				} 
+				catch (IllegalStateException e) 
+				{
+					e.printStackTrace();
+				} 
+				catch (IOException e) 
+				{
+					e.printStackTrace();
+				}
+				
 				
 			}
 		
