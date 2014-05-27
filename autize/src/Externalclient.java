@@ -18,6 +18,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.math.BigInteger;
 import java.net.CookieManager;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -91,6 +92,7 @@ public class Externalclient extends Applet{
 	JFrame confirmSaveFrame = null;
 	String FILENAME_PATTERN = "filename=[\"](.*)[\"]";
 	int bufferSize = 65536;
+	JFrame downloadFrame = null;
 	
 	/*
 	 * disableSSL		:	Method to disable the SSL.
@@ -171,9 +173,9 @@ public class Externalclient extends Applet{
 		else
 		{
 			//upload 
-			//uploadForClient();
+			uploadForClient();
 			//download
-			showSaveDialog("https://192.168.9.163/download/get/a-1-1-8");
+			//showSaveDialog("https://192.168.9.163/download/get/a-1-1-8");
 		}
 		
 	}
@@ -356,38 +358,11 @@ public class Externalclient extends Applet{
 	    		
 	    		if(!saveFile.exists())
 	    		{
-	    			 FileOutputStream fos;
-					try 
-					{
-						fos = new FileOutputStream(saveFile);
-						byte[] buffer = new byte[bufferSize*2];
-				        int len1 = 0;
-				        int i = 1;
-				        System.out.println("Writing to disk now...");
-				        
-				        while ((len1 = in.read(buffer)) != -1) 
-						{
-						          fos.write(buffer, 0, len1);
-						          System.out.println("loop +"+i);
-						          i++;
-						}
-				        System.out.println("Writing over.");
-						fos.close();
-						saveFile = null;
-						in = null;
-						filename = null;
-					} 
-					catch (FileNotFoundException e) 
-					{
-						e.printStackTrace();
-						retVal = e.getMessage();
-					} 
-					catch (IOException e) 
-					{
-						retVal = e.getMessage();
-						e.printStackTrace();
-					}
-			         
+	    			writeFileOnDisk(saveFile	,in);
+						
+					saveFile = null;
+					in = null;
+					filename = null;
 					
 	    		}
 	    		else
@@ -564,11 +539,19 @@ public class Externalclient extends Applet{
 		return retVal;
 	}
 	
-	public void writeFileOnDisk(File file, InputStream inStream)
+	public void writeFileOnDisk(File file, InputStream inStream, BigInteger size)
 	{
 		FileOutputStream fos;
 		try 
 		{
+			
+			downloadFrame = new JFrame("Downloading...");
+			
+			
+			
+			
+			
+			System.out.println("confirm save ok.. writing now..");
 			fos = new FileOutputStream(file);
 			byte[] buffer = new byte[bufferSize];
 	        int len1 = 0;
@@ -582,6 +565,10 @@ public class Externalclient extends Applet{
 	        }
 	        System.out.println("written done...");
 	        fos.close();
+	        
+	        
+	        
+	        
 		} 
 		catch (FileNotFoundException e) 
 		{
@@ -601,40 +588,12 @@ public class Externalclient extends Applet{
 		public void actionPerformed(ActionEvent arg0) 
 		{
 			saveFile.delete();
-			FileOutputStream fos;
-			try 
-			{
-				System.out.println("confirm save ok.. writing now..");
-				fos = new FileOutputStream(saveFile);
-				byte[] buffer = new byte[bufferSize];
-		        int len1 = 0;
-		        int i = 1;
-		        System.out.println("Writing to disk now...");
-		        while ((len1 = in.read(buffer)) != -1) 
-		        {
-		                  fos.write(buffer, 0, len1);
-		                  System.out.println("loop "+i);
-		                  i++;
-		        }
-		        fos.close();
-		        
-		        System.out.println("written done...");
-		        in = null;
-		        saveFile = null;
-		        filename = null;
-		        confirmSaveFrame.dispose();
-			} 
-			catch (FileNotFoundException e) 
-			{
-				e.printStackTrace();
-				
-			} 
-			catch (IOException e)
-			{
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-	         
+			
+			writeFileOnDisk(saveFile, in);
+			in = null;
+		    saveFile = null;
+		    filename = null;
+		    confirmSaveFrame.dispose();
 		}
 
 	}
