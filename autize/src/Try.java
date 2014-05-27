@@ -9,11 +9,36 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLContextBuilder;
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
+import org.apache.http.entity.mime.HttpMultipartMode;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
 
 
 public class Try {
@@ -21,10 +46,228 @@ public class Try {
 	static File openFile;
 	static JFrame replaceFrame;
 	static JFrame parentFrame;
-	
-	
-	public static void main(String[] args) throws FileNotFoundException 
+	static String uploadLink;
+	static CloseableHttpClient httpclient;
+	public static void uploadForClient() throws IOException
+	{
+		
+		System.out.println("INSIDE UPLOAD METHOD");
+		
+		JFileChooser chooser = new JFileChooser();
+		JFrame parent = new JFrame();
+		
+		//FileNameExtensionFilter filter = new FileNameExtensionFilter( "JPG & GIF Images", "jpg", "gif");
+		//chooser.setFileFilter(filter);
+		
+		int status = chooser.showOpenDialog(parent);
+		if(status == JFileChooser.APPROVE_OPTION)
 		{
+			File file = chooser.getSelectedFile();
+			System.out.println("File selected :"+ file.getName());
+		}
+		/*
+		File image = new File(filePath);
+	    FileBody fileBody = new FileBody(image);
+
+	   
+	    HttpPost post = new HttpPost("https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
+	    post.setHeader("enctype", "multipart/form-data");
+
+	    MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
+	    multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+	    multipartEntity.addPart("uploadfile", fileBody);
+	    post.setEntity(multipartEntity.build());
+	    System.out.println("content type = :"+multipartEntity.build().getContentType());
+		System.out.println("centen length = :"+multipartEntity.build().getContentLength());
+		
+	    HttpResponse response = httpclient.execute(post);
+	    
+	    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+	    String line = "";
+	    
+	    while ((line = rd.readLine()) != null) 
+	    {
+	      System.out.println(line);
+	    }
+	    */
+	}
+	public static void uploadForClient1() throws IOException
+	{
+		
+		System.out.println("INSIDE UPLOAD METHOD");
+		
+		JFileChooser chooser = new JFileChooser();
+		JFrame parent = new JFrame();
+		
+		//FileNameExtensionFilter filter = new FileNameExtensionFilter( "JPG & GIF Images", "jpg", "gif");
+		//chooser.setFileFilter(filter);
+		
+		int status = chooser.showOpenDialog(parent);
+		if(status == JFileChooser.APPROVE_OPTION)
+		{
+			File file = chooser.getSelectedFile();
+			FileBody fileBody = new FileBody(file);
+			HttpPost post = new HttpPost("https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
+			post.setHeader("enctype", "multipart/form-data");
+			MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
+		    multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+		    multipartEntity.addPart("uploadfile", fileBody);
+		    post.setEntity(multipartEntity.build());
+		    HttpResponse response = httpclient.execute(post);
+		    System.out.println("upload status : " + response.getStatusLine());
+		    
+		    System.out.println("content type = :"+multipartEntity.build().getContentType());
+			System.out.println("centen length = :"+multipartEntity.build().getContentLength());
+		    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+		    String line = "";
+		    
+		    while ((line = rd.readLine()) != null) 
+		    {
+		      System.out.println(line);
+		    }
+		}
+		/*
+		File image = new File(filePath);
+	    FileBody fileBody = new FileBody(image);
+
+	   
+	    HttpPost post = new HttpPost("https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
+	    post.setHeader("enctype", "multipart/form-data");
+
+	    MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
+	    multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+	    multipartEntity.addPart("uploadfile", fileBody);
+	    post.setEntity(multipartEntity.build());
+	    
+	    System.out.println("content type = :"+multipartEntity.build().getContentType());
+		System.out.println("centen length = :"+multipartEntity.build().getContentLength());
+		
+	    HttpResponse response = httpclient.execute(post);
+	    
+	    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+	    String line = "";
+	    
+	    while ((line = rd.readLine()) != null) 
+	    {
+	      System.out.println(line);
+	    }
+	    */
+	}
+	public static void main(String[] args) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, ClientProtocolException, IOException
+	{
+		SSLContextBuilder builder = new SSLContextBuilder();
+		builder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
+		SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(builder.build(), SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER );
+		httpclient = HttpClients.custom().setSSLSocketFactory(sslsf).build();
+		
+		HttpGet httpget = new HttpGet("https://192.168.9.163/share/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t");
+		HttpResponse response1 = httpclient.execute(httpget);
+		BufferedReader rd = new BufferedReader(new InputStreamReader(response1.getEntity().getContent()));
+		String line = "";
+		    
+		while ((line = rd.readLine()) != null) 
+		{
+			System.out.println(line);
+		}
+		
+		HttpPost post = new HttpPost("https://192.168.9.163/share/password/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t");
+		List <NameValuePair> list = new ArrayList<NameValuePair>();
+		list.add(new BasicNameValuePair("password","88888888"));
+		post.setEntity(new UrlEncodedFormEntity(list));
+		response1 = httpclient.execute(post);
+		 rd = new BufferedReader(new InputStreamReader(response1.getEntity().getContent()));
+			line = "";
+			    
+			while ((line = rd.readLine()) != null) 
+			{
+				System.out.println(line);
+			}
+			
+			//upload
+			File image = new File("C:\\Users\\kshitij\\Desktop\\codes.txt");
+		    FileBody fileBody = new FileBody(image);
+		    post = new HttpPost("https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
+		    post.setHeader("enctype", "multipart/form-data");
+
+		    MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
+		    multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+		    
+		    multipartEntity.addPart("uploadfile", fileBody);
+		    
+		    post.setEntity(multipartEntity.build());
+		    
+		    System.out.println("content type = :"+multipartEntity.build().getContentType());
+			
+		    System.out.println("centen length = :"+multipartEntity.build().getContentLength());
+			
+		    HttpResponse response = httpclient.execute(post);
+		    
+		    rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+		    line = "";
+		    
+		    while ((line = rd.readLine()) != null) 
+		    {
+		      System.out.println(line);
+		    }
+		    
+
+		    if(image.exists())
+		    {
+		    	System.out.println("file exist");
+		    }
+
+		    httpclient.close();
+		System.out.println("wefwfwfwf");
+	}
+	public static void main1(String[] args) throws FileNotFoundException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException 
+	{
+		
+		SSLContextBuilder builder = new SSLContextBuilder();
+		builder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
+		SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(builder.build(), SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER );
+		httpclient = HttpClients.custom().setSSLSocketFactory(sslsf).build();
+		
+		CloseableHttpResponse response2 = null; 
+		
+			HttpPost httpPost = null;
+			List <NameValuePair> list = null;
+			
+			list = new ArrayList<NameValuePair>();
+			httpPost = new HttpPost("https://192.168.9.163/share/password/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t");
+			
+			
+			try 
+			{
+				list.add(new BasicNameValuePair("password","88888888"));
+				httpPost.setEntity(new UrlEncodedFormEntity(list));
+				
+				response2 = httpclient.execute(httpPost);
+				
+				BufferedReader rd = new BufferedReader(new InputStreamReader(response2.getEntity().getContent()));
+				String line = "";
+				    
+				while ((line = rd.readLine()) != null) 
+				{
+					System.out.println(line);
+				}
+				
+				response2.close();
+			} 
+			catch (UnsupportedEncodingException e) 
+			{
+				e.printStackTrace();
+			} 
+			catch (ClientProtocolException e) 
+			{
+				e.printStackTrace();
+			} 
+			catch (IOException e) 
+			{
+				e.printStackTrace();
+			}
+	
+		
+		/*
 		// TODO Auto-generated method stub
 		 parentFrame = new JFrame();
 		 
@@ -144,6 +387,7 @@ public class Try {
 			
 		
 		 }
+		 */
 	}
 
 }

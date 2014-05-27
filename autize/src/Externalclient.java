@@ -1,4 +1,5 @@
 import java.applet.Applet;
+import java.awt.GridLayout;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -35,6 +36,12 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import javax.swing.JApplet;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
@@ -166,8 +173,8 @@ public class Externalclient extends Applet{
 	public void init(String debugMode)
 	{
 				
-		
-	
+		authenticate();
+		initialiseApplet("");
 
 	
 	}	  
@@ -329,7 +336,7 @@ public class Externalclient extends Applet{
 		        	        
 		
 	    
-	  
+	  /*
 	    
 	    if (m.find( )) 
 	    {
@@ -358,18 +365,39 @@ public class Externalclient extends Applet{
 	         
 				
 			 // httpPost = new HttpPost("");
-			  
+			 */ 
 			
 	              return null;
 
 	}
 	
 
-	public void uploadForClient(CloseableHttpClient httpclient , String uploadUrl, String filePath) throws IOException
+	public void uploadForClient() throws IOException
 	{
 		
-
-		System.out.println("wefewfewfewfewfewf");
+		System.out.println("INSIDE UPLOAD METHOD");
+		
+		JFileChooser chooser = new JFileChooser();
+		JFrame parent = new JFrame();
+		
+		//FileNameExtensionFilter filter = new FileNameExtensionFilter( "JPG & GIF Images", "jpg", "gif");
+		//chooser.setFileFilter(filter);
+		
+		int status = chooser.showOpenDialog(parent);
+		if(status == JFileChooser.APPROVE_OPTION)
+		{
+			File file = chooser.getSelectedFile();
+			FileBody fileBody = new FileBody(file);
+			HttpPost post = new HttpPost(this.uploadLink);
+			post.setHeader("enctype", "multipart/form-data");
+			MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
+		    multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+		    multipartEntity.addPart("uploadfile", fileBody);
+		    post.setEntity(multipartEntity.build());
+		    HttpResponse response = httpclient.execute(post);
+		    System.out.println("upload status : " + response.getStatusLine());
+		}
+		/*
 		File image = new File(filePath);
 	    FileBody fileBody = new FileBody(image);
 
@@ -381,6 +409,7 @@ public class Externalclient extends Applet{
 	    multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
 	    multipartEntity.addPart("uploadfile", fileBody);
 	    post.setEntity(multipartEntity.build());
+	    
 	    System.out.println("content type = :"+multipartEntity.build().getContentType());
 		System.out.println("centen length = :"+multipartEntity.build().getContentLength());
 		
@@ -393,7 +422,7 @@ public class Externalclient extends Applet{
 	    {
 	      System.out.println(line);
 	    }
-	    
+	    */
 	}
 }
 
