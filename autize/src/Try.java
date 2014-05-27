@@ -160,6 +160,8 @@ public class Try {
 		SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(builder.build(), SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER );
 		httpclient = HttpClients.custom().setSSLSocketFactory(sslsf).build();
 		
+		
+		
 		HttpGet httpget = new HttpGet("https://192.168.9.163/share/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t");
 		HttpResponse response1 = httpclient.execute(httpget);
 		BufferedReader rd = new BufferedReader(new InputStreamReader(response1.getEntity().getContent()));
@@ -184,10 +186,10 @@ public class Try {
 			}
 			
 			//upload
-			File image = new File("C:\\Users\\kshitij\\Desktop\\codes.txt");
+			File image = new File("C:\\Users\\kshitij\\Desktop\\Access Cookies from a Java Applet - Real's Java How-to.htm");
 		    FileBody fileBody = new FileBody(image);
 		    post = new HttpPost("https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
-		    post.setHeader("enctype", "multipart/form-data");
+		    //post.setHeader("enctype", "multipart/form-data");
 
 		    MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
 		    multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);

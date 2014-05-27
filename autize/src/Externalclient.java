@@ -48,6 +48,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -104,7 +105,7 @@ public class Externalclient extends Applet{
 			SSLContextBuilder builder = new SSLContextBuilder();
 			builder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
 			SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(builder.build(), SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER );
-			httpclient = HttpClients.custom().setSSLSocketFactory(sslsf).build();
+			this.httpclient = HttpClients.custom().setSSLSocketFactory(sslsf).build();
 		} 
 		catch (NoSuchAlgorithmException e2) 
 		{
@@ -151,16 +152,18 @@ public class Externalclient extends Applet{
     	this.uploadLink = uploadLink;
     }
     
-    private String initialiseApplet(String loginLink, String password, String uploadLink)
+    private String initialiseApplet(String loginLink, String password, String uploadLink) throws ClientProtocolException, IOException
     {
     	String retVal = null;
-    	
+    	System.out.println("inseide initiApplet");
     	this.loginLink = loginLink;
     	this.loginPassword = password;
     	this.uploadLink = uploadLink;
     	
+    	System.out.println("before diable SSL");
     	disableSSL();
     	
+    	System.out.println("before authenticate");
     	System.out.println("RETURN VALUE OF AUTHENTICATE : "+authenticate());
     	return retVal;
     }
@@ -170,41 +173,42 @@ public class Externalclient extends Applet{
      * @see java.applet.Applet#init()
      * 
      */
-	public void init(String debugMode)
+	public void init() 
 	{
-				
-		authenticate();
-		initialiseApplet("");
-
+		
 	
 	}	  
 	public void start()
 	{
+		System.out.println("before initialiseApplet");
+		try {
+			initialiseApplet("https://192.168.9.163/share/password/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t","88888888","https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
+		
+		System.out.println("befor upload");
+		/*
+		try {
+			System.out.println("upload status : "+uploadForClient());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		*/
+		System.out.println("after upload");
 	}
 	public void stop()
 	{
 		
 	}
 	
-	private void printEntityContent(CloseableHttpResponse response)
-	{
-		
-		
-		if(response != null)
-		{
-			String line;
-			
-			BufferedReader rd = new BufferedReader(new InputStreamReader(response2.getEntity().getContent()));
-			line = "";
-			
-			while ((line = rd.readLine()) != null) 
-			{
-				System.out.println(line);
-			}
-			      
-		}
-	}
+	
 	
 	/*
 	 * authenticate			:	method to login into the external client link.
@@ -214,55 +218,38 @@ public class Externalclient extends Applet{
 	 * NOTE					:	METHOD USED FOR ONLY DEBUGGING PURPOSES.THIS METHOD IS NOT REQUIRED 
 	 * 								FOR DEPLOYMENT PURPOSES. 			
 	 */
-	public String authenticate()
+	public String authenticate() throws ClientProtocolException, IOException
 	{
-
-		if(debugMode == "ON")
-		{
-			System.out.println("INSIDE AUTHENTICATION...");
-		}
-		
-		
+	
 		String retVal = null;
 		if(httpclient != null)
 		{
 			if(!(loginLink == null || loginPassword == null))
 			{
-				CloseableHttpResponse response2 = null; 
 			
-				HttpPost httpPost = null;
-				List <NameValuePair> list = null;
+				HttpGet httpget = null;
+				HttpResponse response1 = null;
+				BufferedReader rd = null;
+				String line = null;
 				
-				list = new ArrayList<NameValuePair>();
-				httpPost = new HttpPost(loginLink);
+				HttpPost post = new HttpPost(this.loginLink);
 				
+				List <NameValuePair> list = new ArrayList<NameValuePair>();
 				
-				try 
+				list.add(new BasicNameValuePair("password",this.loginPassword));
+				
+				post.setEntity(new UrlEncodedFormEntity(list));
+				
+				response1 = httpclient.execute(post);
+				
+				rd = new BufferedReader(new InputStreamReader(response1.getEntity().getContent()));
+				line = "";
+					    
+				while ((line = rd.readLine()) != null) 
 				{
-					httpPost.setEntity(new UrlEncodedFormEntity(list));
-					list.add(new BasicNameValuePair("password",loginPassword));
-					response2 = httpclient.execute(httpPost);
-					
-					if(debugMode == "ON")
-					{
-						printEntityContent(response2);
-						System.out.println("END OF AUTHENTICATION...");
-					}
-					
-					response2.close();
-				} 
-				catch (UnsupportedEncodingException e) 
-				{
-					retVal = e.getMessage();
-				} 
-				catch (ClientProtocolException e) 
-				{
-					retVal = e.getMessage();
-				} 
-				catch (IOException e) 
-				{
-					retVal = e.getMessage();
+					System.out.println(line);
 				}
+				
 			}
 		
 		}
@@ -372,57 +359,38 @@ public class Externalclient extends Applet{
 	}
 	
 
-	public void uploadForClient() throws IOException
+	public String uploadForClient() throws IOException
 	{
-		
-		System.out.println("INSIDE UPLOAD METHOD");
-		
+		String retVal = null;
+		//upload file
 		JFileChooser chooser = new JFileChooser();
-		JFrame parent = new JFrame();
-		
-		//FileNameExtensionFilter filter = new FileNameExtensionFilter( "JPG & GIF Images", "jpg", "gif");
-		//chooser.setFileFilter(filter);
-		
+		JFrame parent =  new JFrame();
 		int status = chooser.showOpenDialog(parent);
 		if(status == JFileChooser.APPROVE_OPTION)
 		{
-			File file = chooser.getSelectedFile();
-			FileBody fileBody = new FileBody(file);
-			HttpPost post = new HttpPost(this.uploadLink);
-			post.setHeader("enctype", "multipart/form-data");
-			MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
+			FileBody fileBody = new FileBody(chooser.getSelectedFile());
+		    HttpPost post = new HttpPost(this.uploadLink);
+		    post.setHeader("enctype", "multipart/form-data");
+		    MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
 		    multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+		    
 		    multipartEntity.addPart("uploadfile", fileBody);
+		    
 		    post.setEntity(multipartEntity.build());
+		    
 		    HttpResponse response = httpclient.execute(post);
-		    System.out.println("upload status : " + response.getStatusLine());
+		    
+		    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+		    String line = "";
+		    retVal = response.getStatusLine().toString();
+		    while ((line = rd.readLine()) != null) 
+		    {
+		      System.out.println(line);
+		    }
+
 		}
-		/*
-		File image = new File(filePath);
-	    FileBody fileBody = new FileBody(image);
 
-	   
-	    HttpPost post = new HttpPost("https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
-	    post.setHeader("enctype", "multipart/form-data");
-
-	    MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
-	    multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
-	    multipartEntity.addPart("uploadfile", fileBody);
-	    post.setEntity(multipartEntity.build());
-	    
-	    System.out.println("content type = :"+multipartEntity.build().getContentType());
-		System.out.println("centen length = :"+multipartEntity.build().getContentLength());
-		
-	    HttpResponse response = httpclient.execute(post);
-	    
-	    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
-	    String line = "";
-	    
-	    while ((line = rd.readLine()) != null) 
-	    {
-	      System.out.println(line);
-	    }
-	    */
+		return retVal;
 	}
 }
 
