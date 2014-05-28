@@ -94,8 +94,11 @@ public class Externalclient extends Applet{
 	JFrame confirmSaveFrame = null;
 	String FILENAME_PATTERN = "filename=[\"](.*)[\"]";
 	int bufferSize = 65536;
-	JFrame downloadFrame = null;
+	
 	long contentLength;
+
+	
+	
 	private static volatile boolean IS_WRITE = false;
 	
 	/*
@@ -134,9 +137,6 @@ public class Externalclient extends Applet{
 		}
 		return retVal;
 	}
-
-
-    
     private String initialiseApplet(String loginLink, String password, String uploadLink) 
     {
     	String retVal = null;
@@ -177,9 +177,9 @@ public class Externalclient extends Applet{
 		else
 		{
 			//upload 
-			//uploadForClient();
+			uploadForClient();
 			//download
-			showSaveDialog("https://192.168.9.163/download/get/a-1-1-8");
+			//showSaveDialog("https://192.168.9.163/download/get/a-1-1-8");
 		}
 		
 	}
@@ -388,116 +388,15 @@ public class Externalclient extends Applet{
 		}
 		return retVal;
 	}
-	/*
-	 * downloadForClient		:	method to download file for the external client.
-	 */
-	/*
-	public String downloadForClient(String downloadUrl)
-	{
-		
-		String retVal = null;
-		CloseableHttpResponse response = null;
-		
-		HttpGet httpget1 = new HttpGet(downloadUrl);
-		
-		try 
-		{
-			response = httpclient.execute(httpget1);
-			Header[] headers = response.getHeaders("Content-Disposition");
-			if(headers.length == 0)
-			{
-				retVal = "CONTENT_DISPOSITION_NOT_PRESENT";
-				System.out.println("content disposition not preset");
-			}
-			else
-			{
-				
-				//extracting the name of the file.
-				Pattern r = Pattern.compile(FILENAME_PATTERN);
-			    String filename = null;
-			    Matcher m = r.matcher(headers[0].toString());
-			    
-			    if(m.find())
-			    {
-			    	//filename found 
-			    	filename = m.group(1);
-			    	System.out.println("filename ="+filename);
-			    	
-			    	//assign in proper value which will be used by ConformSaveCancel and ConfirmSaveOk to get the data.
-			    	this.in = ( response.getEntity().getContent());
-			    	
-			    	JFrame parentFrame = new JFrame();
-			    	
-			    	JFileChooser fileChooser = new JFileChooser();
-					fileChooser .setSelectedFile(new File(filename));
-			    	
-			    	int userSelection = fileChooser.showSaveDialog(parentFrame);
-			    	
-			    	if(userSelection == JFileChooser.APPROVE_OPTION)
-			    	{
-			    		this.saveFile = new File(fileChooser.getCurrentDirectory() + File.separator + fileChooser.getSelectedFile().getName());
-			    		
-			    		if(!saveFile.exists())
-			    		{
-			    			 FileOutputStream fos = new FileOutputStream(saveFile);
-					         byte[] buffer = new byte[bufferSize];
-					         int len1 = 0;
-					         while ((len1 = in.read(buffer)) != -1) 
-					         {
-					                   fos.write(buffer, 0, len1);
-					         }
-					         fos.close();
-			    		}
-			    		else
-			    		{
-			    			confirmSaveFrame = new JFrame("Confirm Save As");
-			    			confirmSaveFrame.setSize(400,400);
-			    			confirmSaveFrame.setLayout(new GridLayout(3,1));
-			    			confirmSaveFrame.add(new JLabel(fileChooser.getSelectedFile().getName() + " already present. Do you want to replace it?"));
-			    			JButton submit = new JButton("Ok");
-							JButton cancel = new JButton("Cancel");
-							confirmSaveFrame.add(submit);
-							confirmSaveFrame.add(cancel);
-							confirmSaveFrame.setVisible(true);
-							
-							submit.addActionListener(new ConfirmSaveOk());
-							cancel.addActionListener(new ConformSaveCancel());
-			    		}
-			    	}
-			    	
-		            
-
-			    }
-			    else
-			    {
-			    	retVal = "Error in downloadForClient :Matcher cannot find the pattern. FILE PATTER = '"+FILENAME_PATTERN+"' and HEADER got = "+ headers[0].toString();
-			    }
-			}
-		} 
-		catch (ClientProtocolException e) 
-		{
-			e.printStackTrace();
-			retVal = "Error in downloadForClient:"+e.getMessage();
-		} 
-		catch (IOException e) 
-		{
-			e.printStackTrace();
-			retVal = "Error in downloadForClient:"+e.getMessage();
-		}
-		return retVal;
-
-	}
-	public void savedialogBox()
-	{
-		
-	}
-*/
+	
 	public String uploadForClient()  
 	{
 		String retVal = null;
 		
 		//upload file
 		JFileChooser chooser = new JFileChooser();
+		
+		
 		JFrame parent =  new JFrame();
 		int status = chooser.showOpenDialog(parent);
 		if(status == JFileChooser.APPROVE_OPTION)
@@ -515,7 +414,25 @@ public class Externalclient extends Applet{
 		    HttpResponse response;
 			try 
 			{
+				JFrame uploadFrame = new JFrame("Uploading...");
+				uploadFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+				uploadFrame.setBounds(0, 0, 300, 200);
+				
+				JProgressBar uploadProgressBar;
+				uploadProgressBar = new JProgressBar(0,100);
+				uploadProgressBar.setBounds(20, 20, 200, 30);
+				uploadProgressBar.setValue(0);
+				uploadProgressBar.setStringPainted(true);
+				
+				ProgressBarListener listener = new ProgressBarListener(uploadProgressBar, chooser.getSelectedFile().length());
+			    FileEntityWithProgressBar fileEntity = new FileEntityWithProgressBar(chooser.getSelectedFile(), "binary/octet-stream", listener,this.bufferSize);
+			    post.setEntity(fileEntity);
+			    uploadFrame.add(uploadProgressBar);
+			    uploadFrame.setVisible(true);
+			    
 				response = httpclient.execute(post);
+				
+				
 				BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
 			    String line = "";
 			    retVal = response.getStatusLine().toString();
@@ -549,7 +466,7 @@ public class Externalclient extends Applet{
 		try 
 		{
 			
-			downloadFrame = new JFrame("Downloading...");
+			JFrame downloadFrame = new JFrame("Downloading...");
 			downloadFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			downloadFrame.setBounds(0, 0, 300, 200);
 			final JProgressBar progressBar = new JProgressBar(0,100);
