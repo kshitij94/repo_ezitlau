@@ -23,9 +23,11 @@ import java.net.CookieManager;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.InvalidKeyException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -34,6 +36,11 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -182,7 +189,14 @@ public class Externalclient extends Applet{
 			disableSSL();
 			System.out.println("befor deviece authenticate");
 			
-				deviceAuthenticate("https://192.168.9.90/login","intern1@vaultize.com", "Password", "{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}");
+				try {
+					deviceAuthenticate("https://192.168.9.90/login","intern1@vaultize.com", "88888888", "{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}");
+				} catch (InvalidKeyException | NoSuchAlgorithmException
+						| NoSuchProviderException | NoSuchPaddingException
+						| IllegalBlockSizeException | BadPaddingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			
 			System.out.println("after de vice authenticate");
 			//upload 
@@ -199,7 +213,7 @@ public class Externalclient extends Applet{
 	
 	
 	
-	public String deviceAuthenticate(String loginLink, String username, String password, String device) 
+	public String deviceAuthenticate(String loginLink, String username, String password, String device) throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException 
 	{
 		String retVal = null;
 		StringEntity entity;
@@ -227,6 +241,41 @@ public class Externalclient extends Applet{
 			jsonObj = new JSONObject(IOUtils.toString(response.getEntity().getContent()));
 			System.out.println("secrete key :" + jsonObj.getString("sec"));
 			System.out.println("status = "+response.getStatusLine());
+			
+			HttpGet getDownload = new HttpGet("https://192.168.9.90/download/1w-1-3-5-1");
+			response = httpclient.execute(getDownload);
+			
+			BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+		    int line;
+		    retVal = response.getStatusLine().toString();
+		    long blockNumber = 0;
+		    
+		    char[] cbuf = new char[16 * 1024];
+		    while ((line = rd.read(cbuf)) != -1) 
+		    {
+		    	
+		    	System.out.println(line);
+		    	String key = "1w-1-3-5-1" + blockNumber + jsonObj.getString("sec");
+		  
+		    	byte[] byteKey = key.getBytes();
+		    	key = "";
+		    	for(int i = 0 ; i < 32; i++)
+		    	{
+		    		key += byteKey[i];
+		    	}
+		    	
+		    	 Cipher cipher = Cipher.getInstance("AES");
+		    	System.out.println("Key:"+key);
+				String encryptionKey = key;
+				SecretKeySpec secKey = new SecretKeySpec(encryptionKey.getBytes("UTF-8"), "AES");
+		    	
+				cipher.init(Cipher.DECRYPT_MODE, secKey); 
+				
+				 String decoded = new String(cipher.doFinal(cbuf.toString().getBytes()),"UTF-8");
+		    	System.out.println(decoded);
+		    }
+		    
+			
 			
 			
 			
