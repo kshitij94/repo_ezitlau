@@ -45,6 +45,8 @@ import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JProgressBar;
+import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.commons.io.IOUtils;
@@ -93,6 +95,8 @@ public class Externalclient extends Applet{
 	String FILENAME_PATTERN = "filename=[\"](.*)[\"]";
 	int bufferSize = 65536;
 	JFrame downloadFrame = null;
+	long contentLength;
+	private static volatile boolean IS_WRITE = false;
 	
 	/*
 	 * disableSSL		:	Method to disable the SSL.
@@ -173,9 +177,9 @@ public class Externalclient extends Applet{
 		else
 		{
 			//upload 
-			uploadForClient();
+			//uploadForClient();
 			//download
-			//showSaveDialog("https://192.168.9.163/download/get/a-1-1-8");
+			showSaveDialog("https://192.168.9.163/download/get/a-1-1-8");
 		}
 		
 	}
@@ -304,6 +308,9 @@ public class Externalclient extends Applet{
 			    	
 			    	//assign in proper value which will be used by ConformSaveCancel and ConfirmSaveOk to get the data.
 			    	this.in = (response.getEntity().getContent());
+			    	
+			    	//setting up the content length 
+			    	contentLength = Long.valueOf(response.getHeaders("Content-Length")[0].getValue());
 			   	}
 			    else
 			    {
@@ -324,9 +331,6 @@ public class Externalclient extends Applet{
 		return retVal;
 
 	}
-	
-	
-	
 	public String showSaveDialog(String downloadUrl)
 	{
 		String retVal = null;
@@ -539,34 +543,54 @@ public class Externalclient extends Applet{
 		return retVal;
 	}
 	
-	public void writeFileOnDisk(File file, InputStream inStream, BigInteger size)
+	public void writeFileOnDisk(File file, InputStream inStream)
 	{
 		FileOutputStream fos;
 		try 
 		{
 			
 			downloadFrame = new JFrame("Downloading...");
+			downloadFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			downloadFrame.setBounds(0, 0, 300, 200);
+			final JProgressBar progressBar = new JProgressBar(0,100);
+			progressBar.setBounds(20, 20, 200, 30);
+			progressBar.setValue(0);
+		    progressBar.setStringPainted(true);
+			IS_WRITE = true;
 			
-			
-			
-			
-			
+			downloadFrame.add(progressBar);
+			downloadFrame.setVisible(true);
 			System.out.println("confirm save ok.. writing now..");
 			fos = new FileOutputStream(file);
 			byte[] buffer = new byte[bufferSize];
 	        int len1 = 0;
 	        int i = 1;
-	        System.out.println("Writing to disk now...");
+	        System.out.println("content length :" + contentLength + " :Writing to disk now...");
+	        
+	        
+	        int lenSum = 0;
+	        
 	        while ((len1 = in.read(buffer)) != -1) 
 	        {
 	                  fos.write(buffer, 0, len1);
-	                  System.out.println("loop "+i);
-	                  i++;
+	                  
+	                  lenSum += len1;
+	                  
+	                  System.out.println("data read "+lenSum);
+	                  
+	                  final int tempLenSum = lenSum; 
+	                  SwingUtilities.invokeLater(new Runnable() 
+	                  {
+	                      public void run() 
+	                      {
+	                         progressBar.setValue((int) (100 * tempLenSum/contentLength));
+	                      }
+	                   });
 	        }
 	        System.out.println("written done...");
 	        fos.close();
 	        
-	        
+	        downloadFrame.dispose();
 	        
 	        
 		} 
