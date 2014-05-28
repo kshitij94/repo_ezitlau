@@ -68,6 +68,7 @@ import org.apache.http.conn.ssl.SSLContextBuilder;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.cookie.Cookie;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
@@ -79,6 +80,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 
 
@@ -148,7 +151,7 @@ public class Externalclient extends Applet{
     	retVal = disableSSL();
     	if(retVal == null)
     	{
-    		retVal = authenticate();
+    		retVal = externalClientAuthenticate();
     	}    	
     	return retVal;
     }
@@ -168,16 +171,22 @@ public class Externalclient extends Applet{
 		String result = null;
 		System.out.println("before initialiseApplet");
 		
-		result = 	initialiseApplet("https://192.168.9.163/share/password/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t","88888888","https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
-
+		//result = 	initialiseApplet("https://192.168.9.163/share/password/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t","88888888","https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
+		
 		if(result != null)
 		{
 			System.out.println(result);
 		}
 		else
 		{
+			disableSSL();
+			System.out.println("befor deviece authenticate");
+			
+				deviceAuthenticate("https://192.168.9.90/login","intern1@vaultize.com", "Password", "{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}");
+			
+			System.out.println("after de vice authenticate");
 			//upload 
-			uploadForClient();
+			//uploadForClient();
 			//download
 			//showSaveDialog("https://192.168.9.163/download/get/a-1-1-8");
 		}
@@ -190,6 +199,54 @@ public class Externalclient extends Applet{
 	
 	
 	
+	public String deviceAuthenticate(String loginLink, String username, String password, String device) 
+	{
+		String retVal = null;
+		StringEntity entity;
+		JSONObject jsonObj;
+		try 
+		{
+			jsonObj = new JSONObject(device);
+			
+
+			System.out.println(jsonObj.toString());
+			//entity.setContentType("application/json");
+			
+			HttpPost post = new HttpPost(loginLink);
+			//post.setEntity(entity);
+			
+			List <NameValuePair> list = new ArrayList<NameValuePair>();
+			list.add(new BasicNameValuePair("password",password));
+			list.add(new BasicNameValuePair("user",username));
+			list.add(new BasicNameValuePair("device", jsonObj.toString()));
+			System.out.println(list);
+			
+			post.setEntity(new UrlEncodedFormEntity(list));
+			
+			CloseableHttpResponse response = httpclient.execute(post);
+			jsonObj = new JSONObject(IOUtils.toString(response.getEntity().getContent()));
+			System.out.println("secrete key :" + jsonObj.getString("sec"));
+			System.out.println("status = "+response.getStatusLine());
+			
+			
+			
+		} 
+		catch (JSONException e1) 
+		{
+			e1.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return retVal;
+	}
 	/*
 	 * authenticate			:	method to login into the external client link.
 	 * Pre					:	External client has not logged in the external link.
@@ -198,7 +255,7 @@ public class Externalclient extends Applet{
 	 * NOTE					:	METHOD USED FOR ONLY DEBUGGING PURPOSES.THIS METHOD IS NOT REQUIRED 
 	 * 								FOR DEPLOYMENT PURPOSES. 			
 	 */
-	public String authenticate()  
+	public String externalClientAuthenticate()  
 	{
 	
 		String retVal = null;
