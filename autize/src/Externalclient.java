@@ -23,6 +23,7 @@ import java.net.CookieManager;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.CharBuffer;
 import java.security.InvalidKeyException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
@@ -189,6 +190,7 @@ public class Externalclient extends Applet{
 			disableSSL();
 			System.out.println("befor deviece authenticate");
 			
+			/*
 				try {
 					deviceAuthenticate("https://192.168.9.90/login","intern1@vaultize.com", "88888888", "{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}");
 				} catch (InvalidKeyException | NoSuchAlgorithmException
@@ -197,7 +199,16 @@ public class Externalclient extends Applet{
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+			*/
 			
+			try {
+				clientAu("https://192.168.9.90/login","intern1@vaultize.com", "88888888","{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}");
+			} catch (InvalidKeyException | NoSuchAlgorithmException
+					| NoSuchPaddingException | IllegalBlockSizeException
+					| BadPaddingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			System.out.println("after de vice authenticate");
 			//upload 
 			//uploadForClient();
@@ -210,9 +221,132 @@ public class Externalclient extends Applet{
 	{
 		
 	}
+	private int read(InputStream in, byte[] buffer) throws IOException
+	{
+		
+		int inputRead = 0;
+		int readRetVal = in.read(buffer);
+		if(readRetVal != -1)
+		{
+			while(inputRead < buffer.length && readRetVal != -1)
+			{
+				inputRead += readRetVal;
+				readRetVal = in.read(buffer, inputRead, buffer.length - (inputRead));
+				//System.out.print(readRetVal + " ");
+			}
+		}
+		else
+		{
+			inputRead = -1;
+		}
+		
+		
+		return inputRead;
+	}
+	public void clientAu(String loginLink, String username,String password, String device) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException
+	{
+		String retVal = null;
+		StringEntity entity;
+		JSONObject jsonObj;
+		try 
+		{
+			jsonObj = new JSONObject(device);
+			
+
+			System.out.println(jsonObj.toString());
+			//entity.setContentType("application/json");
+			
+			HttpPost post = new HttpPost(loginLink);
+			//post.setEntity(entity);
+			
+			List <NameValuePair> list = new ArrayList<NameValuePair>();
+			list.add(new BasicNameValuePair("password",password));
+			list.add(new BasicNameValuePair("user",username));
+			list.add(new BasicNameValuePair("device", jsonObj.toString()));
+			System.out.println(list);
+			
+			post.setEntity(new UrlEncodedFormEntity(list));
+			
+			CloseableHttpResponse response = httpclient.execute(post);
+						
+			jsonObj = new JSONObject(IOUtils.toString(response.getEntity().getContent()));
+			System.out.println("secrete key :" + jsonObj.getString("sec"));
+			System.out.println("status = "+response.getStatusLine());
+			
+			HttpGet getDownload = new HttpGet("https://192.168.9.90/download/l-1-3-2&-1");
+			response = httpclient.execute(getDownload);
+			
+			InputStream rd = response.getEntity().getContent();
+			
+			
+			
+			int SIZE = 16 * 1024 + 16;
+			FileOutputStream feos = new FileOutputStream(new File("C:\\Users\\kshitij\\Desktop"+File.separator + getDownloadFileName(response.getHeaders("Content-Disposition")[0])));
+		    //System.out.println("file path to save:"+"C:\\Users\\kshitij\\Desktop"+File.separator + getDownloadFileName(response.getHeaders("Content-Disposition")[0]));
+			
+			byte[] buffer = new byte[SIZE];
+			int readRetVal ;
+			int blockNumber = 0;
+			
+			while((readRetVal = read(rd, buffer)) != -1)
+			{
+				System.out.println("read length:"+readRetVal);
+				byte[] longKey = ("l-1-3-2" + blockNumber + jsonObj.getString("sec")).getBytes("UTF-8");
+				
+				byte[] shortKey = new byte[32];
+				for(int i = 0 ; i < 32; i++)
+				{
+					shortKey[i] = longKey[i];
+				}
+		    	Cipher cipher = Cipher.getInstance("AES/ECB/NOPADDING");
+		    	SecretKeySpec secKey = new SecretKeySpec(shortKey, "AES");
+		    	cipher.init(Cipher.DECRYPT_MODE, secKey);
+		    	byte[] decoded = new byte[readRetVal];
+		    	
+		    	decoded = cipher.doFinal(buffer);
+		    	System.out.println("padding length:"+ ((decoded[readRetVal-1])));
+		    	feos.write(decoded, 0, readRetVal - (decoded[readRetVal-1]));
+		    	blockNumber++;
+			}
+		    feos.close();
+			
+			
+			
+		} 
+		catch (JSONException e1) 
+		{
+			e1.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
 	
-	
-	
+	private String getDownloadFileName(Header header) 
+	{
+		Pattern r = Pattern.compile(FILENAME_PATTERN);
+	    String  retVal = null;
+	    Matcher m = r.matcher(header.getValue());
+	    
+	    if(m.find())
+	    {
+	    	//filename found 
+	    	retVal = m.group(1);
+	    	System.out.println("filename ="+retVal);
+	   	}
+	    else
+	    {
+	    	System.out.println("can not find file name");
+	    }
+		return retVal;
+	}
 	public String deviceAuthenticate(String loginLink, String username, String password, String device) throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException 
 	{
 		String retVal = null;
