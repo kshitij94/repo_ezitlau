@@ -15,6 +15,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
@@ -105,10 +106,12 @@ public class Externalclient extends Applet{
 	JFrame confirmSaveFrame = null;
 	String FILENAME_PATTERN = "filename=[\"](.*)[\"]";
 	int bufferSize = 65536;
-	
+	int BLOCK_SIZE = 16 * 1024;
 	long contentLength;
-
-	
+	static int ENC_KEY_LEN = 32;
+	static int ENC_BLOCK_LEN = 16;
+	static String FILE_ID_PATTERN = "[\\w\\d]+-[\\w\\d]+-[\\w\\d]+-[\\w\\d]+";
+	int KEY_SIZE = 32;
 	
 	private static volatile boolean IS_WRITE = false;
 	
@@ -202,10 +205,22 @@ public class Externalclient extends Applet{
 			*/
 			
 			try {
-				clientAu("https://192.168.9.90/login","intern1@vaultize.com", "88888888","{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}");
+				//uploadEncryptedFile("https://192.168.9.90/login","intern1@vaultize.com", "88888888","{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}","https://192.168.9.90/shareupload");
+				tetsingEnDownload("https://192.168.9.90/login","intern1@vaultize.com", "88888888","{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}", "https://192.168.9.90/download/l-1-3-7&-1");
+				
+			
 			} catch (InvalidKeyException | NoSuchAlgorithmException
 					| NoSuchPaddingException | IllegalBlockSizeException
 					| BadPaddingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ClientProtocolException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
@@ -242,6 +257,454 @@ public class Externalclient extends Applet{
 		
 		
 		return inputRead;
+	}
+	
+	public void uploadEncryptedFile(String loginLink, String username,String password, String device, String encryUpLink) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException
+	{
+		String retVal = null;
+		StringEntity entity;
+		JSONObject jsonObj;
+		try 
+		{
+			jsonObj = new JSONObject(device);
+			
+
+			System.out.println(jsonObj.toString());
+			//entity.setContentType("application/json");
+			
+			HttpPost post = new HttpPost(loginLink);
+			//post.setEntity(entity);
+			
+			List <NameValuePair> list = new ArrayList<NameValuePair>();
+			list.add(new BasicNameValuePair("password",password));
+			list.add(new BasicNameValuePair("user",username));
+			list.add(new BasicNameValuePair("device", jsonObj.toString()));
+			System.out.println(list);
+			
+			post.setEntity(new UrlEncodedFormEntity(list));
+			
+			CloseableHttpResponse response = httpclient.execute(post);
+						
+			jsonObj = new JSONObject(IOUtils.toString(response.getEntity().getContent()));
+			System.out.println("secrete key :" + jsonObj.getString("sec"));
+			System.out.println("status = "+response.getStatusLine());
+			System.out.println("device id ="+jsonObj.getString("dev"));
+			
+			JFileChooser upChooser = new JFileChooser();
+			JFrame parent = new JFrame();
+			int status = upChooser.showOpenDialog(upChooser);
+			if(status == JFileChooser.APPROVE_OPTION)
+			{
+				File inputFile = upChooser.getSelectedFile();
+				
+				
+				//File encrypted = File.createTempFile(upChooser.getSelectedFile().getName(),null);
+				
+				File encrypted = new File("C:\\Users\\kshitij\\Desktop\\debug" + File.separator +"(encrypted)" +upChooser.getSelectedFile().getName());
+				encrypted.createNewFile();
+			    if(encrypted.exists())
+			    {
+			            encrypted.delete();
+			    }
+			    OutputStream ous = null;
+			    InputStream ios = null;
+			    int blockNum = 0;
+			    String id = jsonObj.getString("dev");
+			    try 
+			    {
+			            ous = new FileOutputStream(encrypted);
+			            ios = new FileInputStream(inputFile);
+
+			            byte[] buffer;
+			            int availableBytes = ios.available();
+			            if(availableBytes < BLOCK_SIZE)
+			            {
+			                buffer = new byte[availableBytes];
+			            }
+			            else
+			            {
+			            	buffer = new byte[BLOCK_SIZE];
+			            }
+			            int blockNumber = 0;
+			            int numBytesRead;
+			            while((numBytesRead = read(ios, buffer)) != -1)
+			            {
+			            	System.out.println("bytes read :"+numBytesRead + " buffer size:"+buffer.length);
+				            
+			            	
+			            	byte[] longKey = (id + blockNumber + jsonObj.getString("sec")).getBytes("UTF-8");
+							
+							byte[] shortKey = new byte[32];
+							for(int i = 0 ; i < 32; i++)
+							{
+								shortKey[i] = longKey[i];
+							}
+			            	
+					     	byte[] toWrite = encrypt(buffer,  shortKey);
+			            	
+			                ous.write(toWrite, 0, toWrite.length);
+			                
+			                availableBytes = ios.available();
+			                
+			                if(availableBytes < BLOCK_SIZE)
+			                {
+			                    if(availableBytes != 0)
+			                    {
+			                    	buffer = new byte[ios.available()];
+			                    }
+			                        
+			                }
+			                blockNum++;
+			            }
+			            ous.close();
+			            /*
+			            while (( numBytesRead = ios.read(buffer, 0, buffer.length))!= -1 ) 
+			            {
+			            	/*
+			            	byte[] longKey = (id + blockNumber + jsonObj.getString("sec")).getBytes("UTF-8");
+							
+							byte[] shortKey = new byte[32];
+							for(int i = 0 ; i < 32; i++)
+							{
+								shortKey[i] = longKey[i];
+							}
+			            	
+					     	byte[] toWrite = encrypt(buffer,  shortKey);
+			            	
+			                ous.write(toWrite, 0, toWrite.length);
+			                
+			                blockNum++;
+			                
+			                availableBytes = ios.available();
+			                
+			                if(availableBytes < BLOCK_SIZE)
+			                {
+			                    if(availableBytes != 0)
+			                    {
+			                    	buffer = new byte[ios.available()];
+			                    }
+			                        
+			                }
+			            }
+			        */
+			         
+			            //uploading the file ...
+			            FileBody fileBody = new FileBody(encrypted);
+					    HttpPost uploadPost = new HttpPost(encryUpLink);
+					    post.setHeader("enctype", "multipart/form-data");
+					    MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
+					    multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+					    
+					    multipartEntity.addPart("uploadfile", fileBody);
+					    
+					    post.setEntity(multipartEntity.build());
+					    
+					    response = httpclient.execute(post);
+					    
+					    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+					    
+					    String line = "";
+					    
+					    while ((line = rd.readLine()) != null) 
+					    {
+					      System.out.println(line);
+					    }
+					    System.out.println("Uploaded");
+					    
+			            
+			    } 
+			    finally 
+			    {
+			            try 
+			            {
+			                if ( ous != null )
+			                {
+			                	ous.close();
+			                }
+			            } 
+			            catch ( IOException e) 
+			            {
+			            	e.printStackTrace();
+			            }
+
+			            try 
+			            {
+			                if ( ios != null )
+			                {
+			                	ios.close();
+			                }
+			            } 
+			            catch ( IOException e) 
+			            {
+			            	e.printStackTrace();
+			            }
+			        }
+			        
+			}
+		} 
+		catch (JSONException e1) 
+		{
+			e1.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("ot of the functionasdce current directory" +   System.getProperty("user.dir"));
+	}
+	public void testing(String loginLink, String username,String password, String device) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException
+	{
+		String retVal = null;
+		StringEntity entity;
+		JSONObject jsonObj;
+		try 
+		{
+			jsonObj = new JSONObject(device);
+			
+
+			System.out.println(jsonObj.toString());
+			//entity.setContentType("application/json");
+			
+			HttpPost post = new HttpPost(loginLink);
+			//post.setEntity(entity);
+			
+			List <NameValuePair> list = new ArrayList<NameValuePair>();
+			list.add(new BasicNameValuePair("password",password));
+			list.add(new BasicNameValuePair("user",username));
+			list.add(new BasicNameValuePair("device", jsonObj.toString()));
+			System.out.println(list);
+			
+			post.setEntity(new UrlEncodedFormEntity(list));
+			
+			CloseableHttpResponse response = httpclient.execute(post);
+						
+			jsonObj = new JSONObject(IOUtils.toString(response.getEntity().getContent()));
+			System.out.println("secrete key :" + jsonObj.getString("sec"));
+			System.out.println("status = "+response.getStatusLine());
+			
+			HttpGet getDownload = new HttpGet("https://192.168.9.90/download/l-1-3-2&-1");
+			response = httpclient.execute(getDownload);
+			
+			InputStream rd = response.getEntity().getContent();
+			
+			rd = new FileInputStream(new File("C:\\Users\\kshitij\\Desktop\\debug\\(encrypted)20130814_23821.jpg"));
+			
+			int SIZE = 16 * 1024 + 16;
+			FileOutputStream feos = new FileOutputStream(new File("C:\\Users\\kshitij\\Desktop\\debug"+File.separator +"(decrypted).jpg" ));
+		    //System.out.println("file path to save:"+"C:\\Users\\kshitij\\Desktop"+File.separator + getDownloadFileName(response.getHeaders("Content-Disposition")[0]));
+			
+			byte[] buffer = new byte[SIZE];
+			int readRetVal ;
+			int blockNumber = 0;
+			
+			while((readRetVal = read(rd, buffer)) != -1)
+			{
+				System.out.println("read length:"+readRetVal);
+				byte[] longKey = (jsonObj.getString("dev")+ blockNumber + jsonObj.getString("sec")).getBytes("UTF-8");
+				
+				byte[] shortKey = new byte[32];
+				for(int i = 0 ; i < 32; i++)
+				{
+					shortKey[i] = longKey[i];
+				}
+				
+		    	Cipher cipher = Cipher.getInstance("AES/ECB/NOPADDING");
+		    	SecretKeySpec secKey = new SecretKeySpec(shortKey, "AES");
+		    	cipher.init(Cipher.DECRYPT_MODE, secKey);
+		    	byte[] decoded = new byte[readRetVal];
+		    	
+		    	decoded = cipher.doFinal(buffer);
+		    	System.out.println("padding length:"+ ((decoded[readRetVal-1])));
+		    	feos.write(decoded, 0, readRetVal - (decoded[readRetVal-1]));
+		    	blockNumber++;
+			}
+		    feos.close();
+			
+			
+			
+		} 
+		catch (JSONException e1) 
+		{
+			e1.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public static byte[] encrypt(byte[] data, byte[] key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException 
+	   {
+
+	       
+	        int lpad = ENC_BLOCK_LEN - (data.length % ENC_BLOCK_LEN);
+	     
+	        int totalLen = data.length + lpad;
+	        
+	        byte[] finalData = new byte[totalLen];
+	        for(int i = 0; i < totalLen ; i++)
+	        {
+	            if(i < data.length)
+	            {
+	            	finalData[i] = data[i];
+	            }
+	            else
+	            {
+	            	finalData[i] = (byte)lpad;
+	            }
+	        }
+
+	        SecretKeySpec skeySpec = new SecretKeySpec(key, "AES");
+	        Cipher cipher = Cipher.getInstance("AES/ECB/NOPADDING");
+	       
+	        cipher.init(Cipher.ENCRYPT_MODE, skeySpec);
+	        byte[] encrypted = cipher.doFinal(finalData);
+	        return encrypted;
+	    }
+	
+	
+	public void tetsingEnDownload(String loginLink, String username,String password, String device, String downloadUrl) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, JSONException, ClientProtocolException, IOException
+	{
+		String retVal = null;
+		StringEntity entity;
+		JSONObject jsonObj;
+		
+			jsonObj = new JSONObject(device);
+			
+			
+			HttpPost post = new HttpPost(loginLink);
+			
+			List <NameValuePair> list = new ArrayList<NameValuePair>();
+			list.add(new BasicNameValuePair("password",password));
+			list.add(new BasicNameValuePair("user",username));
+			list.add(new BasicNameValuePair("device", jsonObj.toString()));
+			
+			post.setEntity(new UrlEncodedFormEntity(list));
+			
+			CloseableHttpResponse response = httpclient.execute(post);
+						
+			jsonObj = new JSONObject(IOUtils.toString(response.getEntity().getContent()));
+
+			System.out.println("secrete key :" + jsonObj.getString("sec"));
+			System.out.println("status = "+response.getStatusLine());
+			
+			HttpGet getDownload = new HttpGet(downloadUrl);
+			
+			
+			String objectId = getDownloadObjectId(downloadUrl);
+			if(objectId != null)
+			{
+				response = httpclient.execute(getDownload);
+				
+				InputStream rd = response.getEntity().getContent();
+				
+				
+				 File decryptedFile = new File("C:\\Users\\kshitij\\Desktop\\debug"+File.separator + getDownloadFileName(response.getHeaders("Content-Disposition")[0]));
+				 
+			     if(decryptedFile.exists())
+			     {
+			    	 decryptedFile.delete();
+			     }
+			     
+			     
+			     OutputStream decryptedStream = null;
+			     InputStream  encryptedStream = null;
+			     int blockNum = 0;
+			     
+			    	 decryptedStream = new FileOutputStream(decryptedFile);
+			    	 encryptedStream = rd;
+			    	 
+			         byte[] buffer = new byte[BLOCK_SIZE+ENC_BLOCK_LEN];
+			         int byteRead;
+			         int blockNumber = 0; 
+			         while((byteRead = read(encryptedStream, buffer)) != -1)
+			         {
+			        	 byte[] decryptedBytes;
+			        	 byte[] key = getKey(objectId ,blockNumber,jsonObj.getString("sec"));
+			        	 
+			        	 if(byteRead == BLOCK_SIZE+ENC_BLOCK_LEN)
+			        	 {
+			        		 decryptedBytes = decrypt(buffer, key);
+			        	 }
+			        	 else
+			        	 {
+			        		 byte[] tmpEncryptedByte = cutShortByteArray(buffer, byteRead);
+			        		 decryptedBytes = decrypt(tmpEncryptedByte, key);
+			        	 }
+			        	 
+			        	 
+			        	 //decryption of the blocks is done.
+			        	 //now we need to remove padding
+			        	 //padding is detected by reading the last byte of the decryptedBytes.The value represent the size of padding.
+			        	 int  paddingLength = decryptedBytes[decryptedBytes.length-1];
+			        	 System.out.println("BLOCK LENGTH :"+decryptedBytes.length + " Padding length:"+paddingLength);
+			        	 
+			        	 
+			        	 //writing to the file. We need to exclude the padding from the last.
+			        	 decryptedStream.write(decryptedBytes, 0, decryptedBytes.length - paddingLength);
+			        	 blockNumber++;
+			         }
+			         decryptedStream.close();
+			         encryptedStream.close();
+
+			}
+			else
+			{
+				System.out.println("download link"+downloadUrl + " INVALID. It must have [\\w\\d]+-[\\w\\d]+-[\\w\\d]+-[\\w\\d]+ form");
+			}
+	}
+
+	
+	private String getDownloadObjectId(String downloadUrl) 
+	{
+		String retVal = null;
+		Pattern pattern = Pattern.compile(FILE_ID_PATTERN);
+		Matcher m = pattern.matcher(downloadUrl);
+		if(m.find())
+		{
+			retVal = (String) downloadUrl.subSequence(m.start(), m.end());
+		}
+		return retVal;
+		
+	}
+	private byte[] cutShortByteArray(byte[] buffer, int byteRead) {
+		byte[] retVal = new byte[byteRead];
+		for(int i = 0 ; i < byteRead; i++)
+		{
+			retVal[i] = buffer[i];
+		}
+		return retVal;
+	}
+	private byte[] decrypt(byte[] buffer, byte[] key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException 
+	{
+		byte decrypted[];
+		SecretKeySpec skeySpec = new SecretKeySpec(key, "AES");
+	    Cipher cipher = Cipher.getInstance("AES/ECB/NOPADDING");
+	    cipher.init(Cipher.DECRYPT_MODE, skeySpec);
+	    decrypted = cipher.doFinal(buffer);
+		return decrypted;
+	}
+	private byte[] getKey(String fileId, int blockNumber, String orKey) 
+	{
+		
+		byte[] longKey = (fileId + blockNumber + orKey).getBytes(); 
+		byte[] retVal = new byte[KEY_SIZE];
+		for(int i = 0 ; i < KEY_SIZE; i++)
+		{
+			retVal[i] = longKey[i];
+		}
+		return retVal ;
 	}
 	public void clientAu(String loginLink, String username,String password, String device) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException
 	{
