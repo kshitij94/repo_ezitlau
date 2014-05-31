@@ -24,7 +24,12 @@ import java.net.CookieManager;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.CharBuffer;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
@@ -58,6 +63,7 @@ import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -77,10 +83,12 @@ import org.apache.http.conn.ssl.SSLContextBuilder;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.cookie.Cookie;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.entity.mime.content.ContentBody;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.InputStreamBody;
 import org.apache.http.entity.mime.content.StringBody;
@@ -180,7 +188,7 @@ public class Externalclient extends Applet{
 	public void start()
 	{
 		String result = null;
-		System.out.println("before initialiseApplet");
+		
 		
 		//result = 	initialiseApplet("https://192.168.9.163/share/password/a-1-xIIhd4rXMYjBwJeqNu2_TQoEY6m9d+YWRzcXdAZXdmZXcuY29t","88888888","https://192.168.9.163/shareupload/YWRzcXdAZXdmZXcuY29t");
 		
@@ -191,7 +199,7 @@ public class Externalclient extends Applet{
 		else
 		{
 			disableSSL();
-			System.out.println("befor deviece authenticate");
+			
 			
 			/*
 				try {
@@ -205,22 +213,13 @@ public class Externalclient extends Applet{
 			*/
 			
 			try {
-				//uploadEncryptedFile("https://192.168.9.90/login","intern1@vaultize.com", "88888888","{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}","https://192.168.9.90/shareupload");
-				tetsingEnDownload("https://192.168.9.90/login","intern1@vaultize.com", "88888888","{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}", "https://192.168.9.90/download/l-1-3-7&-1");
-				
+				uploadEncryptedFile("https://192.168.9.90/login","intern1@vaultize.com", "88888888","{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}","https://192.168.9.90/upload/");
+				//tetsingEnDownload("https://192.168.9.90/login","intern1@vaultize.com", "88888888","{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}", "https://192.168.9.90/download/l-1-3-1");
+			
 			
 			} catch (InvalidKeyException | NoSuchAlgorithmException
 					| NoSuchPaddingException | IllegalBlockSizeException
 					| BadPaddingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ClientProtocolException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
@@ -261,6 +260,8 @@ public class Externalclient extends Applet{
 	
 	public void uploadEncryptedFile(String loginLink, String username,String password, String device, String encryUpLink) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException
 	{
+		System.out.println("**************UPLOADING ENCRYPTED FILE FROM DEVICE***************** ");
+		System.out.println("UPLOAD LINK :"+encryUpLink);
 		String retVal = null;
 		StringEntity entity;
 		JSONObject jsonObj;
@@ -269,7 +270,7 @@ public class Externalclient extends Applet{
 			jsonObj = new JSONObject(device);
 			
 
-			System.out.println(jsonObj.toString());
+	
 			//entity.setContentType("application/json");
 			
 			HttpPost post = new HttpPost(loginLink);
@@ -279,16 +280,14 @@ public class Externalclient extends Applet{
 			list.add(new BasicNameValuePair("password",password));
 			list.add(new BasicNameValuePair("user",username));
 			list.add(new BasicNameValuePair("device", jsonObj.toString()));
-			System.out.println(list);
 			
 			post.setEntity(new UrlEncodedFormEntity(list));
 			
 			CloseableHttpResponse response = httpclient.execute(post);
 						
 			jsonObj = new JSONObject(IOUtils.toString(response.getEntity().getContent()));
-			System.out.println("secrete key :" + jsonObj.getString("sec"));
-			System.out.println("status = "+response.getStatusLine());
-			System.out.println("device id ="+jsonObj.getString("dev"));
+			System.out.println("SECRET KEY :" + jsonObj.getString("sec"));
+			System.out.println("DEVICE ID :"+jsonObj.getString("dev"));
 			
 			JFileChooser upChooser = new JFileChooser();
 			JFrame parent = new JFrame();
@@ -299,146 +298,124 @@ public class Externalclient extends Applet{
 				
 				
 				//File encrypted = File.createTempFile(upChooser.getSelectedFile().getName(),null);
+				System.out.println("FILE SELECTED FOR UPLOAD:"+inputFile.getAbsolutePath());
 				
-				File encrypted = new File("C:\\Users\\kshitij\\Desktop\\debug" + File.separator +"(encrypted)" +upChooser.getSelectedFile().getName());
-				encrypted.createNewFile();
-			    if(encrypted.exists())
+				File encryptedTmpFile = new File("C:\\Users\\kshitij\\Desktop\\debug" + File.separator +"(encrypted)" +upChooser.getSelectedFile().getName());
+				
+				encryptedTmpFile.createNewFile();
+			    if(encryptedTmpFile.exists())
 			    {
-			            encrypted.delete();
+			    	encryptedTmpFile.delete();
 			    }
-			    OutputStream ous = null;
-			    InputStream ios = null;
+			    OutputStream outputStream = null;
+			    InputStream inputStream = null;
 			    int blockNum = 0;
 			    String id = jsonObj.getString("dev");
 			    try 
 			    {
-			            ous = new FileOutputStream(encrypted);
-			            ios = new FileInputStream(inputFile);
+			    		outputStream = new FileOutputStream(encryptedTmpFile);
+			    		inputStream = new FileInputStream(inputFile);
 
-			            byte[] buffer;
-			            int availableBytes = ios.available();
-			            if(availableBytes < BLOCK_SIZE)
-			            {
-			                buffer = new byte[availableBytes];
-			            }
-			            else
-			            {
-			            	buffer = new byte[BLOCK_SIZE];
-			            }
-			            int blockNumber = 0;
-			            int numBytesRead;
-			            while((numBytesRead = read(ios, buffer)) != -1)
-			            {
-			            	System.out.println("bytes read :"+numBytesRead + " buffer size:"+buffer.length);
-				            
-			            	
-			            	byte[] longKey = (id + blockNumber + jsonObj.getString("sec")).getBytes("UTF-8");
-							
-							byte[] shortKey = new byte[32];
-							for(int i = 0 ; i < 32; i++)
-							{
-								shortKey[i] = longKey[i];
-							}
-			            	
-					     	byte[] toWrite = encrypt(buffer,  shortKey);
-			            	
-			                ous.write(toWrite, 0, toWrite.length);
-			                
-			                availableBytes = ios.available();
-			                
-			                if(availableBytes < BLOCK_SIZE)
-			                {
-			                    if(availableBytes != 0)
-			                    {
-			                    	buffer = new byte[ios.available()];
-			                    }
-			                        
-			                }
-			                blockNum++;
-			            }
-			            ous.close();
-			            /*
-			            while (( numBytesRead = ios.read(buffer, 0, buffer.length))!= -1 ) 
-			            {
-			            	/*
-			            	byte[] longKey = (id + blockNumber + jsonObj.getString("sec")).getBytes("UTF-8");
-							
-							byte[] shortKey = new byte[32];
-							for(int i = 0 ; i < 32; i++)
-							{
-								shortKey[i] = longKey[i];
-							}
-			            	
-					     	byte[] toWrite = encrypt(buffer,  shortKey);
-			            	
-			                ous.write(toWrite, 0, toWrite.length);
-			                
-			                blockNum++;
-			                
-			                availableBytes = ios.available();
-			                
-			                if(availableBytes < BLOCK_SIZE)
-			                {
-			                    if(availableBytes != 0)
-			                    {
-			                    	buffer = new byte[ios.available()];
-			                    }
-			                        
-			                }
-			            }
-			        */
-			         
-			            //uploading the file ...
-			            FileBody fileBody = new FileBody(encrypted);
-					    HttpPost uploadPost = new HttpPost(encryUpLink);
-					    post.setHeader("enctype", "multipart/form-data");
-					    MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
-					    multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
-					    
-					    multipartEntity.addPart("uploadfile", fileBody);
-					    
-					    post.setEntity(multipartEntity.build());
-					    
-					    response = httpclient.execute(post);
-					    
-					    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
-					    
-					    String line = "";
-					    
-					    while ((line = rd.readLine()) != null) 
-					    {
-					      System.out.println(line);
-					    }
-					    System.out.println("Uploaded");
-					    
+			            byte[] buffer = new byte[BLOCK_SIZE];
+			            int readNumBytes;
+			            int blockNumber = 0 ;
 			            
+			            while((readNumBytes = read(inputStream, buffer)) != -1)
+			            {
+			            	byte[] toEncryptBuffer = null;
+			            	int toEncryptBufferSize;
+			            	int paddingLength;
+			            	if(readNumBytes == BLOCK_SIZE)
+			            	{
+			            		toEncryptBufferSize = BLOCK_SIZE + ENC_BLOCK_LEN;
+			            		paddingLength  = ENC_BLOCK_LEN;
+			            	
+			            	}
+			            	else
+			            	{
+			            		paddingLength = ENC_BLOCK_LEN - readNumBytes%ENC_BLOCK_LEN;
+			            		toEncryptBufferSize = readNumBytes + paddingLength;
+			            		
+			            	}
+			            	
+			            	
+			            	toEncryptBuffer = new byte[toEncryptBufferSize];
+			            	
+			            	//copying the original data read into the toEncryptBuffer
+			            	for(int j = 0 ; j < readNumBytes ; j++)
+			            	{
+			            		toEncryptBuffer[j] = buffer[j];
+			            	}
+			            	
+			            	//we need to add padding to the toEncryptBuffer to make it multiple of 16.
+			            	for(int j = readNumBytes ; j < readNumBytes + paddingLength ; j++)
+			            	{
+			            		toEncryptBuffer[j] = (byte)paddingLength;
+			            	}
+			            	
+			            	byte[] encryptedBytes = encrypt(toEncryptBuffer, getKey(jsonObj.getString("dev") ,blockNumber , jsonObj.getString("sec")));
+			            	//writing the encrypted bytes to a local file.
+			            	//outputStream.write(Base64.encodeBase64(encryptedBytes));
+			            	outputStream.write((encryptedBytes));
+			            	blockNumber++;
+			            }
+			            outputStream.close();
+			            //code to decrypt file on th local drive.
+			   
+			            System.out.println("SELECTED FILE IS ENCRYPTED AND SAVED AS "+encryptedTmpFile.getAbsolutePath());
+			            
+			            //code to upload file 
+			            
+			            System.out.println();
+			            System.out.println("***********UPLOADING ENCRYPTED FILE TO SERVER********************");
+			            
+			            String urlEncodeFileName = URLEncoder.encode(encryptedTmpFile.getName(), "UTF-8");
+			            System.out.println("plain filename :"+encryptedTmpFile.getName());
+		                
+			            System.out.println("url encodeing :"+urlEncodeFileName);
+			            
+			            String base64FileName = Base64.encodeBase64String(urlEncodeFileName.getBytes());
+			            System.out.println("base64 encoded :"+base64FileName);
+			            
+			            FileBody fileBody = new FileBody(encryptedTmpFile,ContentType.APPLICATION_OCTET_STREAM, jsonObj.getString("dev")+":"+base64FileName);
+			            
+			            	System.out.println("upload filename:"+jsonObj.getString("dev")+":"+base64FileName);
+			               
+			                 post = new HttpPost(encryUpLink);
+					         
+					         //post = new HttpPost("http://httpbin.org/post");
+					         
+					         post.setHeader("enctype", "multipart/form-data");
+					         
+					         MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
+							 
+					         multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+					         
+							 multipartEntity.addPart("uploadfile", fileBody);
+							 
+							 //multipartEntity.addPart("filename", new StringBody( Base64.encodeBase64String( encryptedTmpFile.getName().getBytes() ),ContentType.DEFAULT_BINARY));
+							 
+							 post.setEntity(multipartEntity.build());
+							 
+							 response = httpclient.execute(post);
+							 
+							
+			            
+			            
+							 
+							 BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+							    String line = "";
+							    retVal = response.getStatusLine().toString();
+							    while ((line = rd.readLine()) != null) 
+							    {
+							      System.out.println(line);
+							    }
+							  
 			    } 
-			    finally 
+			    finally
 			    {
-			            try 
-			            {
-			                if ( ous != null )
-			                {
-			                	ous.close();
-			                }
-			            } 
-			            catch ( IOException e) 
-			            {
-			            	e.printStackTrace();
-			            }
-
-			            try 
-			            {
-			                if ( ios != null )
-			                {
-			                	ios.close();
-			                }
-			            } 
-			            catch ( IOException e) 
-			            {
-			            	e.printStackTrace();
-			            }
-			        }
+			    	
+			    }
 			        
 			}
 		} 
@@ -455,8 +432,10 @@ public class Externalclient extends Applet{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		System.out.println("ot of the functionasdce current directory" +   System.getProperty("user.dir"));
+	
 	}
+	
+	
 	public void testing(String loginLink, String username,String password, String device) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException
 	{
 		String retVal = null;
@@ -546,30 +525,11 @@ public class Externalclient extends Applet{
 	
 	public static byte[] encrypt(byte[] data, byte[] key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException 
 	   {
-
-	       
-	        int lpad = ENC_BLOCK_LEN - (data.length % ENC_BLOCK_LEN);
-	     
-	        int totalLen = data.length + lpad;
-	        
-	        byte[] finalData = new byte[totalLen];
-	        for(int i = 0; i < totalLen ; i++)
-	        {
-	            if(i < data.length)
-	            {
-	            	finalData[i] = data[i];
-	            }
-	            else
-	            {
-	            	finalData[i] = (byte)lpad;
-	            }
-	        }
-
 	        SecretKeySpec skeySpec = new SecretKeySpec(key, "AES");
 	        Cipher cipher = Cipher.getInstance("AES/ECB/NOPADDING");
 	       
 	        cipher.init(Cipher.ENCRYPT_MODE, skeySpec);
-	        byte[] encrypted = cipher.doFinal(finalData);
+	        byte[] encrypted = cipher.doFinal(data);
 	        return encrypted;
 	    }
 	
