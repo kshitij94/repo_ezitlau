@@ -212,10 +212,24 @@ public class Externalclient extends Applet{
 				}
 			*/
 			
+			
+			try
+			{
+				tetsingEnDownload("https://192.168.9.90/login","intern1@vaultize.com", "88888888","{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}", "https://192.168.9.90/download/l-1-2-2");
+			} 
+			catch (InvalidKeyException | NoSuchAlgorithmException
+					| NoSuchPaddingException | IllegalBlockSizeException
+					| BadPaddingException | JSONException | IOException e1) 
+			{
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+			
+			/*
 			try {
 				uploadEncryptedFile("https://192.168.9.90/login","intern1@vaultize.com", "88888888","{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}","https://192.168.9.90/upload/");
-				//tetsingEnDownload("https://192.168.9.90/login","intern1@vaultize.com", "88888888","{'mac': 'V0StJ5', 'plat': 'Windows 7', 'nm': 'VAULTIZE-PC'}", "https://192.168.9.90/download/l-1-3-1");
-			
+				
 			
 			} catch (InvalidKeyException | NoSuchAlgorithmException
 					| NoSuchPaddingException | IllegalBlockSizeException
@@ -223,7 +237,8 @@ public class Externalclient extends Applet{
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			System.out.println("after de vice authenticate");
+			*/
+	
 			//upload 
 			//uploadForClient();
 			//download
@@ -369,7 +384,7 @@ public class Externalclient extends Applet{
 			            System.out.println();
 			            System.out.println("***********UPLOADING ENCRYPTED FILE TO SERVER********************");
 			            
-			            String urlEncodeFileName = URLEncoder.encode(encryptedTmpFile.getName(), "UTF-8");
+			            String urlEncodeFileName = URLEncoder.encode(encryptedTmpFile.getName().substring(11), "UTF-8");
 			            System.out.println("plain filename :"+encryptedTmpFile.getName());
 		                
 			            System.out.println("url encodeing :"+urlEncodeFileName);
@@ -398,10 +413,6 @@ public class Externalclient extends Applet{
 							 post.setEntity(multipartEntity.build());
 							 
 							 response = httpclient.execute(post);
-							 
-							
-			            
-			            
 							 
 							 BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
 							    String line = "";
@@ -562,6 +573,7 @@ public class Externalclient extends Applet{
 			HttpGet getDownload = new HttpGet(downloadUrl);
 			
 			
+			
 			String objectId = getDownloadObjectId(downloadUrl);
 			if(objectId != null)
 			{
@@ -569,6 +581,14 @@ public class Externalclient extends Applet{
 				
 				InputStream rd = response.getEntity().getContent();
 				
+				
+				//pritinh the headers
+				Header[] headers  = response.getAllHeaders();
+				for(int i = 0 ; i < headers.length; i++)
+				{
+					System.out.println("vdfgdfgvdfs************* value:"+headers[i].getName()+ "value :" +headers[i].getValue());
+					
+				}
 				
 				 File decryptedFile = new File("C:\\Users\\kshitij\\Desktop\\debug"+File.separator + getDownloadFileName(response.getHeaders("Content-Disposition")[0]));
 				 
@@ -608,12 +628,13 @@ public class Externalclient extends Applet{
 			        	 //now we need to remove padding
 			        	 //padding is detected by reading the last byte of the decryptedBytes.The value represent the size of padding.
 			        	 int  paddingLength = decryptedBytes[decryptedBytes.length-1];
-			        	 System.out.println("BLOCK LENGTH :"+decryptedBytes.length + " Padding length:"+paddingLength);
 			        	 
-			        	 
+			        	 blockNumber++;
+			        	// System.out.println("BLOCK LENGTH :"+decryptedBytes.length + " Padding length:"+paddingLength + " Total size downloaded:"+ (blockNumber *16400 + byteRead) /1024  + " KB");
+				        System.out.println("Total bytes:"+(blockNumber *16400 + byteRead) + " Bytes");
 			        	 //writing to the file. We need to exclude the padding from the last.
 			        	 decryptedStream.write(decryptedBytes, 0, decryptedBytes.length - paddingLength);
-			        	 blockNumber++;
+			        	 
 			         }
 			         decryptedStream.close();
 			         encryptedStream.close();
