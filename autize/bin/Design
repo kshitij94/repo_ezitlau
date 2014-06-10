@@ -1,0 +1,22 @@
+THe design of the program:
+	
+	
+	String : initialiseApplet() 
+		Method to do the following things:
+			1) assign upload link.
+			2) assign password
+			3)	assign login link
+	String : authenticate()
+			1) log in the server using the password.
+			
+	String: download()
+			1) input a link and download the file from the link.
+			2) take care of the open save as dialog box
+			
+			
+	String: upload()
+			1) take care of the open file dialog
+			2) upload the file on to the server.
+			
+			
+			content-length - j * 
