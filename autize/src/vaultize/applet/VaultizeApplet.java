@@ -4,16 +4,23 @@ import java.applet.Applet;
 import java.io.*;
 import java.math.BigInteger;
 import java.net.*;
+import java.security.InvalidKeyException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Stack;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -93,6 +100,18 @@ public class VaultizeApplet extends Applet {
 			} catch (KeyManagementException | NoSuchAlgorithmException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+			} catch (InvalidKeyException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (NoSuchPaddingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IllegalBlockSizeException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (BadPaddingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 			
 			/*
@@ -138,7 +157,7 @@ public class VaultizeApplet extends Applet {
 		 * 									Then use the shared Deffie Hellman key to decrypt the token. 
 		 * retVal						:	return value of the method. is null if every thing is fine other wise a non null string with error message.
 		 */
-		String executeHandshake(String publicKeyLink,String shareToken)
+		String executeHandshake(String publicKeyLink,String shareToken) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException
 		{
 			URL url;
 			String retVal = null;
@@ -146,8 +165,12 @@ public class VaultizeApplet extends Applet {
 			try 
 			{
 				
+
+					CookieHandler.setDefault( new CookieManager( null, CookiePolicy.ACCEPT_ALL ) );
+				
 					url = new URL(publicKeyLink);
 					HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+					
 					System.out.println("1");
 					
 					//code to disable SSL
@@ -179,7 +202,7 @@ public class VaultizeApplet extends Applet {
 						    System.out.println(header.getKey() + "=" + header.getValue());
 						}
 						
-						List<String> cookies = connection.getHeaderFields().get("Set-Cookie");
+					
 						
 						BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 						String decodedString = "";
@@ -214,20 +237,29 @@ public class VaultizeApplet extends Applet {
 							//Generating the client's public key B
 							BigInteger B = g.modPow(b, p);
 							
+							byte[] sBytes = s.toByteArray();
+							
+							byte[] aesKey = new byte[32];
+							
+							for(int i = 0 ; i < 32; i++)
+							{
+								aesKey[i] = sBytes[i];
+							}
+							
 							url = new URL(shareToken);
 							
 							connection = (HttpURLConnection)url.openConnection();
 							
 							connection.setRequestMethod("POST");
 							
-							
+							/*
 							for (String cookie : cookies) 
 							{
 								System.out.println(cookie.split(";", 2)[0]+";");
 								connection.addRequestProperty("Cookie", cookie.split(";", 2)[0]);
 								
 							}
-							
+							*/
 							
 							connection.setRequestProperty("Accept-Charset", charset);
 							connection.setRequestProperty("Content-Type","application/x-www-form-urlencoded;charset=utf-8");
@@ -237,8 +269,8 @@ public class VaultizeApplet extends Applet {
 							((HttpsURLConnection) connection).setSSLSocketFactory(sslSocketFactory);
 							
 							out = (connection.getOutputStream());
-							query = String.format("Data=%s",URLEncoder.encode(B.toString(),charset));
-							
+							query = String.format("sessionid=%s&data=%s",URLEncoder.encode("324234",charset),URLEncoder.encode(B.toString(),charset));
+							System.out.println(query);
 							
 							out.write(query.getBytes(charset));
 							
@@ -247,17 +279,40 @@ public class VaultizeApplet extends Applet {
 							connection.connect();
 							System.out.println("123");
 							
-							in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+							
+							System.out.println("4");
+							for (Entry<String, List<String>> header : connection.getHeaderFields().entrySet()) {
+							    System.out.println(header.getKey() + "=" + header.getValue());
+							}
+							
+							InputStream tokenInStream = connection.getInputStream();
+							byte[] encryptedToken = new byte[tokenInStream.available()];
+							tokenInStream.read(encryptedToken);
+							
+							System.out.println("bytes to be read  : " + tokenInStream.available());
 							System.out.println("1234");
 							
 							String aeskey = "";
-							tmp = null;
+							tmp = "";
+							
+							
+							//System.out.println(in.);
+							
+							/*
 							while ((tmp = in.readLine()) != null) 
 							{
-								aeskey += aeskey + tmp;
+								//aeskey += aeskey + tmp;
+								System.out.println(tmp);
 							}
+							
 							in.close();
 							System.out.println("***********aes key received :" + aeskey);
+							*/
+							//System.out.println("decoded token :  " +Arrays.toString(decrypt(encryptedToken,aesKey )));
+							System.out.write(decrypt(encryptedToken,aesKey ));
+							
+							
+							/*
 							
 							if(connection.getResponseCode() == HttpURLConnection.HTTP_OK)
 							{
@@ -266,7 +321,7 @@ public class VaultizeApplet extends Applet {
 								tmp = null;
 								while ((tmp = in.readLine()) != null) 
 								{
-									aeskey += aeskey + tmp;
+									//aeskey += aeskey + tmp;
 								}
 								in.close();
 								System.out.println("***********aes key received :" + aeskey);
@@ -275,6 +330,8 @@ public class VaultizeApplet extends Applet {
 							{
 								retVal = "ERROR in executeHandshake  : failed request for token";
 							}
+							
+							*/
 					}
 				
 			catch (MalformedURLException e) 
@@ -341,5 +398,13 @@ public class VaultizeApplet extends Applet {
 			return null;
 			
 		}
-		
+		private byte[] decrypt(byte[] buffer, byte[] key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException 
+		{
+			byte decrypted[];
+			SecretKeySpec skeySpec = new SecretKeySpec(key, "AES");
+		    Cipher cipher = Cipher.getInstance("AES/ECB/NOPADDING");
+		    cipher.init(Cipher.DECRYPT_MODE, skeySpec);
+		    decrypted = cipher.doFinal(buffer);
+			return decrypted;
+		}
 }
